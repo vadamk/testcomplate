@@ -1,0 +1,65 @@
+﻿Function getStyle(element, styleProp)
+
+  Dim document, style
+  Set document = element.ownerDocument
+  If aqObject.IsSupported(document, "defaultView") Then
+    ' Internet Explorer 9+, Firefox, Chrome, Safari, Opera
+    Set style = document.defaultView.getComputedStyle(element, "")
+    getStyle = style.getPropertyValue(styleProp)
+  Else
+    ' Internet Explorer 7 - 8
+    getStyle = element.currentStyle.getPropertyValue(styleProp)
+  End If
+
+End Function
+
+
+'===============================================================================
+' Sub: ScrollDown
+' 
+' Description: 	Scrolls down to a value equal to the height of the objScrollBox, 
+' 				until the TableRow is not visible on the screen.
+'   
+' Parameters:
+'   Object - an object with scrollbar.
+'   Object - object you want to find.
+' 
+'===============================================================================
+
+Sub ScrollDown(objScrollBox, TableRow) 
+
+  If Not TableRow.VisibleOnScreen Then
+    Log.Message("Not TableRow.VisibleOnScreen")
+    If objScrollBox.scrollTop < objScrollBox.scrollHeight Then
+    	objScrollBox.scrollTop = objScrollBox.scrollTop + objScrollBox.height
+    Else
+    	Log.Warning("Item is NOT EXISTS")
+    End if
+    Call ScrollDown(objScrollBox, TableRow)
+  End if
+
+End sub
+
+
+'===============================================================================
+' Function: UrlDecode
+'   Decoding URL encoded UTF-8
+'
+' Description:
+'   Decoding URL encoded UTF-8
+' 
+' Parameters:
+'   String - encoded URL
+' 
+' Returns: 
+'   String - decoded URL
+' 
+'===============================================================================
+Function UrlDecode(s)
+  	Dim JSEngine
+  	Set JSEngine = CreateObject("MSScriptControl.ScriptControl")
+    JSEngine.Language = "JScript"
+
+    UrlDecode = Replace(s, "+", " ")
+    UrlDecode = JSEngine.CodeObject.decodeURIComponent(UrlDecode)
+End Function

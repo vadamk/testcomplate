@@ -1,0 +1,45 @@
+﻿Sub SelectLayoutDialogCheking
+
+	Dim idStrDialog, MenuItem
+	idStrDialog = "qDesignLayoutSelectDialog"
+	MenuItem = "Sales Order"
+
+	Log.AppendFolder("Check all rows in the "&idStrDialog)
+		Call WEBUI.NavigationBarQAD.SelectMenu(MenuItem,"")
+		Call WEBUI.ToolbarQAD.ClickToolBarBtn("edit")
+		Call WEBUI.ToolbarQAD.ClickToolBarDropDown("more","qDesignLayoutToolbarButton")
+		Call LayoutDialog.SLDRowsChecking(FindDialog(idStrDialog))
+	Log.PopLogFolder
+
+	' Check CloseBtn
+	Log.AppendFolder("Check CloseBtn in the "&idStrDialog)
+    Set objDialog = FindDialog(idStrDialog)
+	Set btnName = HTML.ButtonQAD.FindButton_Proximity3(objDialog, "qadLDCloseBtn")
+    Call HTML.ButtonQAD.ClickBtn(btnName)
+		If NOT objDialog.Exists Then 
+			Log.Message("Select Layout Dialog is CLOSED")
+		Else
+			Log.Warning("Select Layout Dialog is NOT CLOSED")
+		End If
+	Log.PopLogFolder
+
+	' Check CancelBtn
+	Log.AppendFolder("Check CancelBtn in the "&idStrDialog)
+		Call WEBUI.ToolbarQAD.ClickToolBarDropDown("more","qDesignLayoutToolbarButton")
+    Set objDialog = FindDialog(idStrDialog)
+		Set btnName = HTML.ButtonQAD.FindButton_Proximity3(objDialog, "qadLDCancelBtn")
+      	Call HTML.ButtonQAD.ClickBtn(btnName)
+		If NOT objDialog.Exists Then 
+			Log.Message("Select Layout Dialog is CLOSED")
+		Else 
+			Log.Warning("Select Layout Dialog is NOT CLOSED")
+		End If
+	Log.PopLogFolder
+
+	' Check Continue
+	Log.AppendFolder("Check ContinueBtn in the "&idStrDialog)
+		Call WEBUI.ToolbarQAD.ClickToolBarDropDown("more","qDesignLayoutToolbarButton")
+		Call LayoutDialog.SLDContinueChecking(idStrDialog, MenuItem, 2)
+	Log.PopLogFolder
+    
+End sub
