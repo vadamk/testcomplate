@@ -1,45 +1,97 @@
-﻿Function getStyle(element, styleProp)
+﻿'===============================================================================
+' Function: GetTextBoxObj
+' 
+' Description: 
+'   
+' Parameters:
+'   Array - arrTextBoxes : 
+'   String - strName : 
+' 
+'===============================================================================
+Function GetTextBoxObj(arrTextBoxes, strName)
+  For i = 0 To UBound(arrTextBoxes)
+    If LCase(arrTextBoxes(i).ObjectIdentifier) = LCase(strName) Then
+      Set GetTextBoxObj = arrTextBoxes(i)
+      Exit For
+    Else
+      If i = UBound(arrTextBoxes) Then
+        GetTextBoxObj = false
+      End if
+    End if
+  Next
+End Function
+
+
+'===============================================================================
+' Sub: ChekInputOnDisable
+' 
+' Description: 
+'   
+' Parameters:
+'   Object - txtInput : 
+'   Boolean - bolInvert : 
+' 
+'===============================================================================
+Sub ChekInputOnDisable(txtInput, bolInvert)
+    If NOT (aqObject.GetPropertyValue(txtInput, "readonly") AND bolInvert) Then
+      Log.Message("Layput """ & txtInput.ObjectIdentifier &""" is available for editing")
+    Else
+      Log.Message("Layput """ & txtInput.ObjectIdentifier &""" is disable for editing")
+    End if
+End Sub
+
+'===============================================================================
+' Function: GetStyle
+' 
+' Description: Retrieving CSS property
+'   
+' Parameters:
+'   Object - objElement : His style need to get
+'   String - strStyleProp : Style property that we need to get
+' 
+' Returns: 
+'   String - Value of CSS property
+' 
+'===============================================================================
+Function GetStyle(objElement, strStyleProp)
 
   Dim document, style
-  Set document = element.ownerDocument
+  Set document = objElement.ownerDocument
   If aqObject.IsSupported(document, "defaultView") Then
     ' Internet Explorer 9+, Firefox, Chrome, Safari, Opera
-    Set style = document.defaultView.getComputedStyle(element, "")
-    getStyle = style.getPropertyValue(styleProp)
+    Set style = document.defaultView.getComputedStyle(objElement, "")
+    getStyle = style.getPropertyValue(strStyleProp)
   Else
     ' Internet Explorer 7 - 8
-    getStyle = element.currentStyle.getPropertyValue(styleProp)
+    getStyle = objElement.currentStyle.getPropertyValue(strStyleProp)
   End If
 
 End Function
-
 
 '===============================================================================
 ' Sub: ScrollDown
 ' 
 ' Description: 	Scrolls down to a value equal to the height of the objScrollBox, 
-' 				until the TableRow is not visible on the screen.
+' 				until the objElement is not visible on the screen.
 '   
 ' Parameters:
 '   Object - an object with scrollbar.
-'   Object - object you want to find.
+'   Object - object that you want to find.
 ' 
 '===============================================================================
+Sub ScrollDown(objScrollBox, objElement) 
 
-Sub ScrollDown(objScrollBox, TableRow) 
-
-  If Not TableRow.VisibleOnScreen Then
-    Log.Message("Not TableRow.VisibleOnScreen")
+  If Not objElement.VisibleOnScreen Then
+    Log.Message("Not objElement.VisibleOnScreen")
     If objScrollBox.scrollTop < objScrollBox.scrollHeight Then
     	objScrollBox.scrollTop = objScrollBox.scrollTop + objScrollBox.height
     Else
     	Log.Warning("Item is NOT EXISTS")
     End if
-    Call ScrollDown(objScrollBox, TableRow)
+    Call ScrollDown(objScrollBox, objElement)
   End if
 
 End sub
-
 
 '===============================================================================
 ' Function: UrlDecode

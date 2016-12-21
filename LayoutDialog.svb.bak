@@ -17,7 +17,7 @@ Sub SLDRowsChecking(objDialog)
     Log.AppendFolder("Checking all the rows in the list of layout.")
       Indicator.PushText("Checking all the rows in the list of layout.")
     
-      Set TableList = HTML.FindChildMethods.FromParent_Proximity1(objDialog, "tagName", "table", 2)
+      Set TableList = HTML.FindChildMethods.FromParent_Proximity1(objDialog, "idStr", "qadLDLayoutList", 2)
 
       Dim i, TableValues
 
@@ -26,12 +26,6 @@ Sub SLDRowsChecking(objDialog)
       Log.AppendFolder("Validation the active column of each item")
         For i = 0 To UBound(TableValues)
           ActiveColumnChecking(TableValues(i))
-        Next
-      Log.PopLogFolder
-
-      Log.AppendFolder("Validation the layout column of each item")
-        For i = 0 To UBound(TableValues)
-          LayoutColumnChecking(TableValues(i))
         Next
       Log.PopLogFolder
 
@@ -48,7 +42,7 @@ End sub
 '   Checks if the correct target after the submmit.
 '   
 ' Parameters:
-'   Object -  objDialog : Dialog object
+'   String -  strIdDialog : Dialog id
 '   String -  strMenuItem : Name of the menu
 '   Integer    -  CheckingType : Type of the checking
 '              -  1 : Check only first item in the list
@@ -56,14 +50,16 @@ End sub
 '              -  3 : Check each of items
 '   
 '===============================================================================
-Sub SLDContinueChecking(objDialog, strMenuItem, CheckingType)
+Sub SLDContinueChecking(strIdDialog, strMenuItem, CheckingType)
 
   On Error Resume Next 
     Log.AppendFolder("Checks if the correct target after the submmit.")
       Indicator.PushText("Checks if the correct target after the submmit.")
 
-      Set TableList = HTML.FindChildMethods.FromParent_Proximity1(objDialog, "tagName", "table", 2)
-      Set TableContainer = objDialog.Panel(1).Panel(0).Panel(1)
+
+      Set objDialog = FindDialog(strIdDialog)
+      Set TableList = HTML.FindChildMethods.FromParent_Proximity1(objDialog, "idStr", "qadLDLayoutList", 2)
+      Set TableContainer = TableList.parentElement
 
       Dim i, TableValues, CellNumber
       CellNumber = 1
@@ -82,7 +78,7 @@ Sub SLDContinueChecking(objDialog, strMenuItem, CheckingType)
           Else 
             Log.Warning("Target is NOT CORRECT")
           End if
-        ' check one item in each category
+        ' Check first item in the each of list category
         Case 2
           For i = 0 To UBound(TableValues)
             Log.AppendFolder("check one item in each category "&i)
@@ -91,30 +87,27 @@ Sub SLDContinueChecking(objDialog, strMenuItem, CheckingType)
               TableRow.Click
               Set btnName = HTML.ButtonQAD.FindButton_Proximity3(objDialog, "qadLDSubmitBtn")
               Call HTML.ButtonQAD.ClickBtn(btnName)
-              
               AqUtils.Delay 100
-
               If NOT objDialog.Exists Then 
                 Log.Checkpoint("Select Layout Dialog is CLOSED")
               Else 
                 Log.Warning("Select Layout Dialog is NOT CLOSED")
               End If
-              
               Set page = Sys.Browser("*").Page("*")
               If CheckSelectedLayout(UrlDecode(page.URL), TableValues(i)(1,0)) Then
                 Log.Event("Target is CORRECT")
               Else 
                 Log.Warning("Target is NOT CORRECT")
               End if
-
               If UBound(TableValues) <> i Then
-                Call NavToSelectLayoutDialog()
+                AqUtils.Delay 250
+                Call NavToSLDialogFromEditor()
                 Set objDialog = FindDialog(strIdDialog)
                 CellNumber = CellNumber + UBound(TableValues(i)) + 1
               End if
             Log.PopLogFolder
           Next
-        ' check all items
+        ' Check each of items
         Case 3
           For i = 0 To UBound(TableValues)
             For j = 1 To UBound(TableValues(i))
@@ -127,7 +120,7 @@ Sub SLDContinueChecking(objDialog, strMenuItem, CheckingType)
                   Log.Message("objDialog is NOT Exists")
                 End if
                 Set btnName = HTML.ButtonQAD.FindButton_Proximity3(objDialog, "qadLDSubmitBtn")
-              Call HTML.ButtonQAD.ClickBtn(btnName)
+                Call HTML.ButtonQAD.ClickBtn(btnName)
                 
                 AqUtils.Delay 100
                 
@@ -136,16 +129,16 @@ Sub SLDContinueChecking(objDialog, strMenuItem, CheckingType)
                 Else 
                   Log.Warning("Select Layout Dialog is NOT CLOSED")
                 End If
-
+                
                 Set page = Sys.Browser("*").Page("*")
                 If CheckSelectedLayout(UrlDecode(page.URL), TableValues(i)(j,0)) Then
                   Log.Event("Target is CORRECT")
                 Else 
                   Log.Warning("Target is NOT CORRECT")
                 End if
-
+                
                 CellNumber = CellNumber + 1
-                Call NavToSelectLayoutDialog()
+                Call NavToSLDialogFromEditor()
                 Set objDialog = FindDialog(strIdDialog)
               Log.PopLogFolder
             Next
@@ -211,38 +204,6 @@ Sub ActiveColumnChecking(arrTBody)
 End Sub
 
 '===============================================================================
-' Sub: LayoutColumnChecking
-' 
-' Description:
-'   Checking the absence of values.
-' 
-' Parameters:
-'   Array - arrTBody : array of the rows in TBODY.
-'
-'===============================================================================
-Sub LayoutColumnChecking(arrTBody)
-  
-  Dim i, tempActive
-  
-  checkEr = false
-
-  For i = 1 to UBound(arrTBody, 1) - 1
-    ' Check for the absence of value.
-    If arrTBody(i, 2) = "" Then
-      checkEr = true
-      Exit For
-    End If
-  Next
-
-  If checkEr = true Then
-    Log.Warning(arrTBody(0, 0) & " is FAIL")
-  Else
-    Log.Checkpoint(arrTBody(0, 0) & " is DONE")
-  End If
-
-End Sub
-
-'===============================================================================
 ' Function: SLDParseTable
 '   Parse TABLE
 ' 
@@ -297,57 +258,36 @@ Function SLDParseTableBody(objTableBody)
 End function
 
 '===============================================================================
-' Sub: ClickDlgBtn
-'  Click the button in the Dialog. (OK, Delete, Continue, Cancel etc)
+' Function:  GetSLRowNumber
 '
 ' Description:  
-'  Click the button in the Dialog. (OK, Delete, Continue, Cancel etc)
-'
+'   
 ' Parameters:
-'   Object - objDialog : Dialog object
-'   String - strIDButton : Pass idStr of the button you want to click 
+'   Object - objTable : 
+'   String - strLayoutName : 
+' 
+' Returns: 
+'   Integer - Row Number
 ' 
 '===============================================================================
-Sub ClickDlgBtn(objDialog, strIDButton)
 
-  On Error Resume Next
-  Log.AppendFolder("Click the '"& strIDButton &"' button in the dialog window")
-    Indicator.PushText("Click the "& strIDButton &" button in the dialog window")
-    
-    Set btnObject = HTML.ButtonQAD.FindButton_Proximity3(objDialog, strIDButton)
+Function GetSLRowNumber(objTable, strLayoutName)
 
-    If btnObject.Exists then
-      If NOT btnObject.Enabled Then 
-         AqUtils.Delay 250
-      End if
-      If Not btnObject.VisibleOnScreen Then
-        Log.Message("Focus the "& strIDButton &" button") 
-        Call btnObject.Focus
-        AqUtils.Delay 100
-        Call btnObject.Click
-        AqUtils.Delay 250
-        Call HTML.UtilsQAD.DelayForPageLoad
+  Log.AppendFolder("Get select layout dialog row number")
+    For i = 0 To objTable.RowCount - 1 
+      If LCase(Trim(objTable.Cell(i, 0).innerText)) = LCase(strLayoutName) Then
+        GetSLRowNumber = i
+        Log.Message( "GetSLRowObj - " & i )
+        Exit For
       Else
-        Log.Message("Click the "& strIDButton &" button")
-        AqUtils.Delay 100
-        Call btnObject.Click 
-        AqUtils.Delay 250
-        Call HTML.UtilsQAD.DelayForPageLoad 
+        If i = objTable.RowCount Then
+          GetSLRowObj = false
+        End if
       End if
-    Else 
-      Log.Warning("Cannot find the button: " & strIDButton)
-    End If 
-    
-    'Error Handling
-    If Err.Number <> 0 Then 
-      Log.Error("Error encountered: Source: " & Err.Source & " Description: " & Err.Description)
-      Err.Clear
-    End if 
-  
-    Indicator.PopText
-  log.PopLogFolder
-  
-End Sub
+    Next
+  Log.PopLogFolder
+
+End Function
 
 '===============================================================================
 ' Function:  FindDialog
@@ -479,7 +419,7 @@ Function CheckOnEditor(url)
 End Function
 
 '===============================================================================
-' Sub: NavToSelectLayoutDialog
+' Sub: NavToSLDialogFromEditor
 '  Opens the "Select design layout" dialog.
 '
 ' Description:  
@@ -490,16 +430,15 @@ End Function
 '   Object - objDialog : Dialog Object
 ' 
 '===============================================================================
-Sub NavToSelectLayoutDialog()
+Sub NavToSLDialogFromEditor()
   
-  Log.AppendFolder("NavToSelectLayoutDialog")
+  Log.AppendFolder("NavToSLDialogFromEditor")
       Set page = Sys.Browser("*").Page("*")
       Set qMainContainer = HTML.FindChildMethods.FromParent_Proximity1(page, "idStr", "qMainContainer", 2)
       Set QADViewContainer = HTML.FindChildMethods.FromParent_Proximity1(qMainContainer, "idStr", "QADViewContainer", 2)
       Set KToolBar_DesignToolbar = HTML.FindChildMethods.FromParent_Proximity1(QADViewContainer, "idStr", "KToolBar_DesignToolbar", 2)
       Set qSelectLayoutToolbarButton = HTML.FindChildMethods.FromParent_Proximity1(KToolBar_DesignToolbar, "idStr", "qSelectLayoutToolbarButton", 2)
       qSelectLayoutToolbarButton.Click
-      
   Log.PopLogFolder
 
 End sub

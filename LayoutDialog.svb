@@ -29,12 +29,6 @@ Sub SLDRowsChecking(objDialog)
         Next
       Log.PopLogFolder
 
-      Log.AppendFolder("Validation the layout column of each item")
-        For i = 0 To UBound(TableValues)
-          LayoutColumnChecking(TableValues(i))
-        Next
-      Log.PopLogFolder
-
       Indicator.PopText
     Log.PopLogFolder
       
@@ -210,38 +204,6 @@ Sub ActiveColumnChecking(arrTBody)
 End Sub
 
 '===============================================================================
-' Sub: LayoutColumnChecking
-' 
-' Description:
-'   Checking the absence of values.
-' 
-' Parameters:
-'   Array - arrTBody : array of the rows in TBODY.
-'
-'===============================================================================
-Sub LayoutColumnChecking(arrTBody)
-  
-  Dim i, tempActive
-  
-  checkEr = false
-
-  For i = 1 to UBound(arrTBody, 1) - 1
-    ' Check for the absence of value.
-    If arrTBody(i, 2) = "" Then
-      checkEr = true
-      Exit For
-    End If
-  Next
-
-  If checkEr = true Then
-    Log.Warning(arrTBody(0, 0) & " is FAIL")
-  Else
-    Log.Checkpoint(arrTBody(0, 0) & " is DONE")
-  End If
-
-End Sub
-
-'===============================================================================
 ' Function: SLDParseTable
 '   Parse TABLE
 ' 
@@ -296,57 +258,36 @@ Function SLDParseTableBody(objTableBody)
 End function
 
 '===============================================================================
-' Sub: ClickDlgBtn
-'  Click the button in the Dialog. (OK, Delete, Continue, Cancel etc)
+' Function:  GetSLRowNumber
 '
 ' Description:  
-'  Click the button in the Dialog. (OK, Delete, Continue, Cancel etc)
-'
+'   
 ' Parameters:
-'   Object - objDialog : Dialog object
-'   String - strIDButton : Pass idStr of the button you want to click 
+'   Object - objTable : 
+'   String - strLayoutName : 
+' 
+' Returns: 
+'   Integer - Row Number
 ' 
 '===============================================================================
-Sub ClickDlgBtn(objDialog, strIDButton)
 
-  On Error Resume Next
-  Log.AppendFolder("Click the '"& strIDButton &"' button in the dialog window")
-    Indicator.PushText("Click the "& strIDButton &" button in the dialog window")
-    
-    Set btnObject = HTML.ButtonQAD.FindButton_Proximity3(objDialog, strIDButton)
+Function GetSLRowNumber(objTable, strLayoutName)
 
-    If btnObject.Exists then
-      If NOT btnObject.Enabled Then 
-         AqUtils.Delay 250
-      End if
-      If Not btnObject.VisibleOnScreen Then
-        Log.Message("Focus the "& strIDButton &" button") 
-        Call btnObject.Focus
-        AqUtils.Delay 100
-        Call btnObject.Click
-        AqUtils.Delay 250
-        Call HTML.UtilsQAD.DelayForPageLoad
+  Log.AppendFolder("Get select layout dialog row number")
+    For i = 0 To objTable.RowCount - 1 
+      If LCase(Trim(objTable.Cell(i, 0).innerText)) = LCase(strLayoutName) Then
+        GetSLRowNumber = i
+        Log.Message( "GetSLRowNumber - " & i )
+        Exit For
       Else
-        Log.Message("Click the "& strIDButton &" button")
-        AqUtils.Delay 100
-        Call btnObject.Click 
-        AqUtils.Delay 250
-        Call HTML.UtilsQAD.DelayForPageLoad 
+        If i = objTable.RowCount Then
+          GetSLRowObj = false
+        End if
       End if
-    Else 
-      Log.Warning("Cannot find the button: " & strIDButton)
-    End If 
-    
-    'Error Handling
-    If Err.Number <> 0 Then 
-      Log.Error("Error encountered: Source: " & Err.Source & " Description: " & Err.Description)
-      Err.Clear
-    End if 
-  
-    Indicator.PopText
-  log.PopLogFolder
-  
-End Sub
+    Next
+  Log.PopLogFolder
+
+End Function
 
 '===============================================================================
 ' Function:  FindDialog
