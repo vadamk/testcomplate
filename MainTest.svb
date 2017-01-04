@@ -3,440 +3,636 @@
 
 Sub MainTest
 
-	Log.AppendFolder("Open Ellipses menu on the toolbar – click on icon")
-		strMenuItem = "Inventory Status Code" ' "Sales Order"
-		strQADSystemDefaultInfo = Array("QAD System Default", "QAD System Default", "Yes", "System")
-		strDesignLayout = "DESIGN_LAYOUT"
-		strTestLayoutName = "Test Layout 01"
-		strTestLayoutDescript = "Test 01"
+  strMenuItem = "Sales Order" ' "Inventory Status Code"
+  Set arrQADSystemDefaultInfo = CreateObject("scripting.dictionary") 
+  arrQADSystemDefaultInfo("layout")   = "QAD System Default"
+  arrQADSystemDefaultInfo("descript") = "QAD System Default"
+  arrQADSystemDefaultInfo("active")   = "Yes"
+  arrQADSystemDefaultInfo("create")   = "System"
+  strDesignLayout = "design_layout"
+  arrTestLayoutName = Array("Test Layout 01", "Test Layout 02")
+  arrTestLayoutDescript = Array("Test 01", "Test 02") 
+  arrTestLayoutCreateFor = Array("System", "10USA")
 
-		' PART 1
+' PART 1
+'===============================================================================
 
-		' Open pop-up window 'Select a Design Layout'
-		Log.AppendFolder("Open pop-up window 'Select a Design Layout'")
-			Call WEBUI.NavigationBarQAD.SelectMenu(strMenuItem,"")
-			Call WEBUI.ToolbarQAD.ClickToolBarBtn("edit")
-			Call WEBUI.ToolbarQAD.ClickToolBarDropDown("more", "qDesignLayoutToolbarButton")
-		Log.PopLogFolder
-		
-		' Check if pop-up window 'Select a Design Layout' is OPEN
-    Log.AppendFolder("Check if pop-up window 'Select a Design Layout' is OPEN")
-      Set objSelectLayoutDialog = FindDialog("qDesignLayoutSelectDialog")
-			If objSelectLayoutDialog.Exists Then 
-				Log.Message("Pop-up window 'Select a Design Layout' is OPEN")
-			Else
-				Log.Warning("Pop-up window 'Select a Design Layout' is NOT OPEN")
-			End If
-		Log.PopLogFolder
-
-		' Check that 'QAD System Default' is highlighted by default
-		Log.AppendFolder("Check that 'QAD System Default' is highlighted by default")
-			Set objTable = HTML.FindChildMethods.FromParent_Proximity1(objSelectLayoutDialog, "idStr", "qadLDLayoutList", 2)
-			intRowNumber = GetSLRowNumber(objTable, strQADSystemDefaultInfo(0))
-      Log.Message("intRowNumber - " & intRowNumber)
-			strDefLayoutClass = objTable.Cell(intRowNumber, 0).parentElement.className
-			If InStr(strDefLayoutClass, "selected") <> 0 Then
-				Log.Message("'QAD System Default' is highlighted by default")
-			Else
-				Log.Warning("'QAD System Default' is NOT highlighted by default")
-			End if
-		Log.PopLogFolder
-
-		' Save the information about layout 'QAD System Default' (layout name, description, active)
-		Log.AppendFolder("Save the information about layout")
-			strQADSystemDefaultInfo(0) = objTable.Cell(intRowNumber, 0).innerText
-			strQADSystemDefaultInfo(1) = objTable.Cell(intRowNumber, 1).innerText
-			strQADSystemDefaultInfo(2) = objTable.Cell(intRowNumber, 2).innerText
-		Log.PopLogFolder
-		
-		' Check that it is possible to highlight other layout available in the list (if any) by click on it
-		Log.AppendFolder("Check that it is possible to highlight other layout")
-			' Check if at least one item is exists
-			If objTable.RowCount > 0 Then 
-				' Check if more than one item.
-				If objTable.RowCount > 2 Then 
-					' Check if more than one item in the 1st category.
-					If objTable.firstElementChild.childElementCount > 2 Then 
-						' If more than one item in the 1st category, we click on the second item in the 1st category
-						Set objTableCell = objTable.Cell(2, 0)
-						objTableCell.Click()
-					Else 
-						' If only one item in the 1st category, we click on the 1st item in the second category
-						Set objTableCell = objTable.Cell(3, 0)
-						objTableCell.Click()
-					End if
-					' Check that it is possible to highlight other layout available in the list (if any) by click on it
-					If InStr(objTableCell.parentElement.className, "selected") <> 0 Then
-						Log.Message("Other layout is highlighted by click on it")
-					Else
-						Log.Warning("Other layout is NOT highlighted by click on it")
-					End if
-				Else 
-					Log.Message("Other layout is NOT EXISTS")
-				End if
-			Else 
-				Log.Warning("Layouts is NOT EXISTS")
-			End if
-		Log.PopLogFolder
-		
-		' Select 'QAD System Default' (if not selected) to start editing and click on 'Continue' button
-		Log.AppendFolder("Select 'QAD System Default' to start editing and click on 'Continue' button")
-			Set objTableCell = objTable.Cell(intRowNumber, 0)
-			objTableCell.Click()
-			Set btnSLSubmit = HTML.ButtonQAD.FindButton_Proximity3(objSelectLayoutDialog, "qadLDSubmitBtn")
-			Call HTML.ButtonQAD.ClickBtn(btnSLSubmit)
-			AQUtils.Delay 1000
-		Log.PopLogFolder
-
-
-		' PART 2
-
-		
-		' Find Panels in the Design Leyout
-		Log.AppendFolder("Find Panels in the Design Leyout")
-			Set objPage = Sys.Browser("*").Page("*")
-			Set objMainContainer = HTML.PanelQAD.FindPanel_Proximity1(objPage, "qMainContainer")
-			Set objViewContainer = HTML.PanelQAD.FindPanel_Proximity1(objMainContainer, "QADViewContainer")
-			Set objToolbar =  HTML.PanelQAD.FindPanel_Proximity1(objViewContainer, "KToolBar_DesignToolbar")
-			Set objDesignLayoutWrapper = HTML.PanelQAD.FindPanel_Proximity1(objViewContainer, "qDesignLayoutWrapper")
-		Log.PopLogFolder
-		
-		' Checks if the correct URL after the submmit.
-		Log.AppendFolder("Checks if the correct URL after the submmit.")
-			If NOT objSelectLayoutDialog.Exists Then 
-				Log.Message("Select Layout Dialog is CLOSED")
-			Else
-				Log.Warning("Select Layout Dialog is NOT CLOSED")
-			End If
-			If CheckSelectedLayout(UrlDecode(objPage.URL), strQADSystemDefaultInfo(0)) Then
-				Log.Message("URL is CORRECT")
-			Else
-				Log.Warning("URL is NOT CORRECT")
-			End If
-		Log.PopLogFolder
-
-		' Check is the warning message on the left top should be visible
-		Log.AppendFolder("Check is the warning message on the left top should be visible")
-
-		  	Set objDesignLayoutWorkspace = HTML.PanelQAD.FindPanel_Proximity1(objViewContainer, "qDesignLayoutWrapper")
-			Set objWarningMessage = objDesignLayoutWorkspace.Find("contentText", "Changes must be saved as a new layout.", 3)
-			If objWarningMessage.Exists Then 
-				Log.Message("Warning message on the left top is visible")
-			Else 
-				Log.Warning("Warning message on the left top is NOT visible")
-			End if
-
-		Log.PopLogFolder
-
-		' Check that information on the toolbar has changed.
-		Log.AppendFolder("Check that information on the toolbar has changed.")
-			' Check that maintenance function on the toolbar is correct.
-			Log.AppendFolder("Check that maintenance function on the toolbar is correct.")
-				
-			Log.PopLogFolder
-			
-			' Check that name of the selected layout ('QAD System Default' ) on the toolbar has changed.
-			Log.AppendFolder("Check that name of the selected layout on the toolbar is correct")
-				Set btnToolbarSelectLayout = HTML.FindChildMethods.FromParent_Proximity1(objToolbar, "idStr", "qSelectLayoutToolbarButton", 2)
-				If btnToolbarSelectLayout.TextNode(1).innerText() = strQADSystemDefaultInfo(0) Then
-					Log.Message("Name of the selected layout on the toolbar is CORRECT")
-				Else
-					Log.Warning("Name of the selected layout on the toolbar is NOT CORRECT")
-				End If
-			Log.PopLogFolder
-		Log.PopLogFolder
-		
-		' Check that the background has changed into Grid mode
-		Log.AppendFolder("Check that the background has changed into Grid mode")
-			strBGFileName = GetStyle(objDesignLayoutWrapper.Section(0), "background-image")
-			' strBGFileName = Replace(Replace(strBGFileName, """)", ""), "url(""", "")
-			If (NOT strBGFileName = "none") AND (NOT strBGFileName = "") Then 
-				Log.Message("Background has changed into Grid mode")
-			Else 
-				Log.Warning("Background has NOT changed into Grid mode")
-			End if
-		Log.PopLogFolder
-		
-		' Check that the button 'Save As' is available (instead of 'Save').
-		Log.AppendFolder("Check that the button 'Save As' is available (instead of 'Save')")
-			Set btnFooterSave = HTML.ButtonQAD.FindButton_Proximity1(objDesignLayoutWrapper, "ToolBtnSave")
-			If Trim(btnFooterSave.innerText) = "Save as" Then
-				Log.Message("Check that the button 'Save As' is available")
-			Else
-				Log.Warning("Check that the button 'Save' is available")
-			End If
-		Log.PopLogFolder
-
-		' Check the side panel 'Set Layout Properties'. Information about the current layout should be correct.
-		Log.AppendFolder("Check if the current layout information in the side panel is correct.")
-			Set objDesignLayoutPropertiesPanel = HTML.PanelQAD.FindPanel_Proximity1(objDesignLayoutWrapper, "qDesignLayoutPropertiesPanel")
-			arrLPTextBoxes = objDesignLayoutPropertiesPanel.FindAllChildren("tagName", "input", 5)
-			Set txtLPLayout = GetTextBoxObj(arrLPTextBoxes, "Layout")
-			Set txtLPDescription = GetTextBoxObj(arrLPTextBoxes, "Description")
-			Set txtLPActive = GetTextBoxObj(arrLPTextBoxes, "Active")
-			Set txtLPCreatedFor = GetTextBoxObj(arrLPTextBoxes, "CreatedFor")
-			Call HTML.TextBoxQAD.VerifyTextBoxValue(txtLPLayout, strQADSystemDefaultInfo(0))
-			Call HTML.TextBoxQAD.VerifyTextBoxValue(txtLPDescription, strQADSystemDefaultInfo(1))
-			Call HTML.TextBoxQAD.VerifyTextBoxValue(txtLPActive, strQADSystemDefaultInfo(2))
-			Call HTML.TextBoxQAD.VerifyTextBoxValue(txtLPCreatedFor, strQADSystemDefaultInfo(3))
-		Log.PopLogFolder
-
-		' Check that only the layout name ('Layout') and the layout description ('Description') fields are available for editing.
-		Log.AppendFolder("Check the information in the side panel 'Set Layout Properties'")
-			Call ChekInputOnDisable(txtLPLayout, false)
-			Call ChekInputOnDisable(txtLPDescription, false)
-			Call ChekInputOnDisable(GetTextBoxObj(arrLPTextBoxes, "Active"), true)
-			Call ChekInputOnDisable(GetTextBoxObj(arrLPTextBoxes, "CreatedFor"), true)
-		Log.PopLogFolder
-
-		' Change the layout name ('Layout' = Test Layout 01) and the layout description ('Description' = Test 01)
-		Log.AppendFolder("Change the value of layout name and the layout description")
-			Call HTML.TextBoxQAD.FillTextBox(txtLPLayout, strTestLayoutName)
-			Call HTML.TextBoxQAD.FillTextBox(txtLPDescription, strTestLayoutDescript)
-		Log.PopLogFolder
-
-		' Click on the button 'Save As' and check that a new pop-up window appears.
-		Log.AppendFolder("Click on the button 'Save As' and check that a new pop-up window appears.")
-			btnFooterSave.Click
-			Set objNewLayoutDialog = FindDialog("qDesignLayoutNewLayout")
-			If objNewLayoutDialog.Exists Then
-				Log.Message("New pop-up window 'New layout' appears")
-			Else
-				Log.Warning("New pop-up window 'New layout' NOT appears ")
-			End If
-		Log.PopLogFolder
-
-		' Check if 'Layout', 'Description' and 'Create For' values default from the 'New layout'
-		Log.AppendFolder("Check if 'Layout', 'Description' and 'Create For' values default from the 'New layout'")
-			arrNLTextBoxes = objNewLayoutDialog.FindAllChildren("tagName", "input", 5)
-			Set txtNLLayout = GetTextBoxObj(arrNLTextBoxes, "Layout")
-			Set txtNLDescription = GetTextBoxObj(arrNLTextBoxes, "Description")
-			Set cmbNLCreateFor = objNewLayoutDialog.Panel(1).Panel(2).Panel(0).TextNode(0)
-			Call HTML.TextBoxQAD.VerifyTextBoxValue(txtNLLayout, strTestLayoutName)
-			Call HTML.TextBoxQAD.VerifyTextBoxValue(txtNLDescription, strTestLayoutDescript)
-			Log.AppendFolder("VerifyValue: 'CreateFor' combobox")
-				If cmbNLCreateFor.innerText = "System" Then
-					Log.Message("VALIDATION PASSED: Value equal 'System'")		
-				Else 
-					Log.Warning("VALIDATION FAILED: Value does not equal 'System'")
-				End if
-			Log.PopLogFolder
-		Log.PopLogFolder
+  ' Open pop-up window 'Select a Design Layout'
+  Log.AppendFolder("Open pop-up window 'Select a Design Layout'")
+    Call WEBUI.NavigationBarQAD.SelectMenu(strMenuItem,"")
+    Call WEBUI.ToolbarQAD.ClickToolBarBtn("edit")
+    Call WEBUI.ToolbarQAD.ClickToolBarDropDown("more", "qDesignLayoutToolbarButton")
+  Log.PopLogFolder
   
-		' Check that it is not possible to leave the mandatory fields empty (the button 'Save' is inactive).
-		Log.AppendFolder("Check that it is not possible to leave the mandatory fields empty")
-			Call HTML.TextBoxQAD.FillTextBox(txtNLLayout, "")
-			Set btnLDSubmitBtn = HTML.ButtonQAD.FindButton_Proximity1(objNewLayoutDialog, "qadLDSubmitBtn")
-			If NOT HTML.ButtonQAD.IsButtonEnabled(btnLDSubmitBtn) Then
-				Log.Message("Is not possible to leave the mandatory fields empty.")
-			Else
-				Log.Warning("Is possible to leave the mandatory fields empty.")
-			End if
-		Log.PopLogFolder
+  ' Check if pop-up window 'Select a Design Layout' is OPEN
+  Log.AppendFolder("Check if pop-up window 'Select a Design Layout' is OPEN")
+    Set objSelectLayoutDialog = FindDialog("qDesignLayoutSelectDialog")
+  Log.PopLogFolder
 
-		' Change the layout name 'Test Layout 01' and the layout description 'Test 01' and click on the button “Save” 
-		Log.AppendFolder("Check that it is not possible to leave the mandatory fields empty")
-			Call HTML.TextBoxQAD.FillTextBox(txtNLLayout, strTestLayoutName)
-      		Call HTML.TextBoxQAD.FillTextBox(txtNLDescription, strTestLayoutDescript)
-			Set btnNLSubmit = HTML.ButtonQAD.FindButton_Proximity3(objNewLayoutDialog, "qadLDSubmitBtn")
-			Call HTML.ButtonQAD.ClickBtn(btnNLSubmit)
-		Log.PopLogFolder
+  ' Check that first item is highlighted by default
+  Log.AppendFolder("Check that first item is highlighted by default")
+    Set objTable = HTML.FindChildMethods.FromParent_Proximity1(objSelectLayoutDialog, "idStr", "qadLDLayoutList", 2)
+    varRowNumber = GetLayoutRowNumber(objTable, arrQADSystemDefaultInfo("create"), arrQADSystemDefaultInfo("layout"), 0)
+    strDefLayoutClass = objTable.Cell(varRowNumber, 0).parentElement.className
+    If NOT InStr(strDefLayoutClass, "selected") = 0 Then
+      Log.Message("First item is highlighted by default")
+    Else
+      Log.Warning("First item is NOT highlighted by default")
+    End if
+  Log.PopLogFolder
+
+  ' Save the information about selected layout (layout name, description, active)
+  Log.AppendFolder("Save the information about selected layout")
+    arrQADSystemDefaultInfo("layout") = objTable.Cell(varRowNumber, 0).innerText
+    arrQADSystemDefaultInfo("descript") = objTable.Cell(varRowNumber, 1).innerText
+    arrQADSystemDefaultInfo("active") = objTable.Cell(varRowNumber, 2).innerText
+  Log.PopLogFolder
+  
+  ' Check that it is possible to highlight other layout available in the list (if any) by click on it
+  Log.AppendFolder("Check that it is possible to highlight other layout")
+    ' Check if at least one item is exists
+    If objTable.RowCount > 0 Then 
+      ' Check if more than one item.
+      If objTable.RowCount > 2 Then 
+        ' Check if more than one item in the 1st category.
+        If objTable.firstElementChild.childElementCount > 2 Then 
+          ' If more than one item in the 1st category, we click on the second item in the 1st category
+          Set objTableCell = objTable.Cell(2, 0)
+          objTableCell.Click()
+        Else 
+          ' If only one item in the 1st category, we click on the 1st item in the second category
+          Set objTableCell = objTable.Cell(3, 0)
+          objTableCell.Click()
+        End if
+        ' Check that it is possible to highlight other layout available in the list (if any) by click on it
+        If InStr(objTableCell.parentElement.className, "selected") <> 0 Then
+          Log.Message("Other layout is highlighted by click on it")
+        Else
+          Log.Warning("Other layout is NOT highlighted by click on it")
+        End if
+      Else 
+        Log.Message("Other layout is NOT EXISTS")
+      End if
+    Else 
+      Log.Warning("Layouts is NOT EXISTS")
+    End if
+  Log.PopLogFolder
+  
+  ' Select 'QAD System Default' (if not selected) to start editing and click on 'Continue' button
+  Log.AppendFolder("Select 'QAD System Default' to start editing and click on 'Continue' button")
+    Set objTableCell = objTable.Cell(varRowNumber, 0)
+    objTableCell.Click()
+    Set btnSLSubmit = HTML.ButtonQAD.FindButton_Proximity3(objSelectLayoutDialog, "qadLDSubmitBtn")
+    Call HTML.ButtonQAD.ClickBtn(btnSLSubmit)
+    AQUtils.Delay 5000
+  Log.PopLogFolder
 
 
-		' PART 3
+' PART 2
+'===============================================================================
+
+  
+  ' Find Panels in the Design Leyout
+  Log.AppendFolder("Find Panels in the Design Leyout")
+    Set objPage = Aliases.browser.page
+    Set objMainContainer = Aliases.browser.page.MainContainer
+    Set objViewContainer = Aliases.browser.page.MainContainer.ViewContainer
+    Set objToolbar = Aliases.browser.page.MainContainer.ViewContainer.Toolbar
+    Set objDesignLayoutWrapper = Aliases.browser.page.MainContainer.ViewContainer.DesignLayoutWrapper
+  Log.PopLogFolder
+
+  ' Check is the warning message on the left top should be visible
+  Log.AppendFolder("Check is the warning message on the left top should be visible")
+    strMessage = "Changes must be saved as a new layout."
+    Set objDesignLayoutWorkspace = HTML.PanelQAD.FindPanel_Proximity1(objViewContainer, "qDesignLayoutWrapper")
+    Set objWarningMessage = objDesignLayoutWorkspace.Find("contentText", strMessage, 3)
+  Log.PopLogFolder
+
+  ' Check that information on the toolbar has changed.
+  Log.AppendFolder("Check that information on the toolbar has changed.")
+    ' Check that maintenance function on the toolbar is correct.
+    Log.AppendFolder("Check that maintenance function on the toolbar is correct.")
+      
+    Log.PopLogFolder
+    
+    ' Check that name of the selected layout ('QAD System Default' ) on the toolbar has changed.
+    Log.AppendFolder("Check that name of the selected layout on the toolbar is correct")
+      Set btnToolbarSelectLayout = HTML.FindChildMethods.FromParent_Proximity1(objToolbar, "idStr", "qSelectLayoutToolbarButton", 2)
+      If btnToolbarSelectLayout.TextNode(1).innerText() = arrQADSystemDefaultInfo("layout") Then
+        Log.Message("Name of the selected layout on the toolbar is CORRECT")
+      Else
+        Log.Warning("Name of the selected layout on the toolbar is NOT CORRECT")
+      End If
+    Log.PopLogFolder
+  Log.PopLogFolder
+  
+  ' Check that the background has changed into Grid mode
+  Log.AppendFolder("Check that the background has changed into Grid mode")
+    strBGFileName = GetStyle(objDesignLayoutWrapper.Section(0), "background-image")
+    If (NOT strBGFileName = "none") AND (NOT strBGFileName = "") Then 
+      Log.Message("Background has changed into Grid mode")
+    Else 
+      Log.Warning("Background has NOT changed into Grid mode")
+    End if
+  Log.PopLogFolder
+  
+  ' Check that the button 'Save As' is available (instead of 'Save').
+  Log.AppendFolder("Check that the button 'Save As' is available (instead of 'Save')")
+    Set btnFooterSave = HTML.ButtonQAD.FindButton_Proximity1(objDesignLayoutWrapper, "ToolBtnSave")
+    If Trim(LCase(btnFooterSave.innerText)) = "save as" Then
+      Log.Message("Check that the button 'Save As' is available")
+    Else
+      Log.Warning("Check that the button 'Save' is available")
+    End If
+  Log.PopLogFolder
+
+  ' Check the side panel 'Set Layout Properties'. Information about the current layout should be correct.
+  Log.AppendFolder("Check if the current layout information in the side panel is correct.")
+    Set objLayoutProperties = HTML.PanelQAD.FindPanel_Proximity1(objDesignLayoutWrapper, "qDesignLayoutPropertiesPanel")
+    arrLPTextBoxes = objLayoutProperties.FindAllChildren("tagName", "input", 5)
+    Set txtLPLayout = GetTextBoxObj(arrLPTextBoxes, "Layout")
+    Set txtLPDescription = GetTextBoxObj(arrLPTextBoxes, "Description")
+    ' Set txtLPActive = GetTextBoxObj(arrLPTextBoxes, "Active")
+    Set txtLPCreatedFor = GetTextBoxObj(arrLPTextBoxes, "CreatedFor")
+    Call HTML.TextBoxQAD.VerifyTextBoxValue(txtLPLayout, arrQADSystemDefaultInfo("layout"))
+    Call HTML.TextBoxQAD.VerifyTextBoxValue(txtLPDescription, arrQADSystemDefaultInfo("descript"))
+    ' Call HTML.TextBoxQAD.VerifyTextBoxValue(txtLPActive, arrQADSystemDefaultInfo("active"))
+    Call HTML.TextBoxQAD.VerifyTextBoxValue(txtLPCreatedFor, arrQADSystemDefaultInfo("create"))
+  Log.PopLogFolder
+
+  ' Check that only the layout name ('Layout') and the layout description ('Description') fields are available for editing.
+  Log.AppendFolder("Check the information in the side panel 'Set Layout Properties'")
+    Call ChekTextBoxOnDisable(txtLPLayout, false)
+    Call ChekTextBoxOnDisable(txtLPDescription, false)
+    ' Call ChekTextBoxOnDisable(txtLPActive, true)
+    Call ChekTextBoxOnDisable(txtLPCreatedFor, true)
+  Log.PopLogFolder
+
+  ' Change the layout name ('Layout' = Test Layout 01) and the layout description ('Description' = Test 01)
+  Log.AppendFolder("Change the value of layout name and the layout description")
+    Call HTML.TextBoxQAD.FillTextBox(txtLPLayout, arrTestLayoutName(0))
+    Call HTML.TextBoxQAD.FillTextBox(txtLPDescription, arrTestLayoutDescript(0))
+  Log.PopLogFolder
+
+  ' Click on the button 'Save As' and check that a new pop-up window appears.
+  Log.AppendFolder("Click on the button 'Save As' and check that a new pop-up window appears.")
+    btnFooterSave.Click
+    AQUtils.Delay 2000
+    Set objNewLayoutDialog = FindDialog("qDesignLayoutNewLayout")
+  Log.PopLogFolder
+
+  ' Check if 'Layout', 'Description' and 'Create For' values default from the 'New layout'
+  Log.AppendFolder("Check if 'Layout', 'Description' and 'Create For' values default from the 'New layout'")
+    arrNLTextBoxes = objNewLayoutDialog.FindAllChildren("tagName", "input", 5)
+    Set txtNLLayout = GetTextBoxObj(arrNLTextBoxes, "Layout")
+    Set txtNLDescription = GetTextBoxObj(arrNLTextBoxes, "Description")
+    Set cmbNLCreateFor = objNewLayoutDialog.Panel(1).Panel(2).Panel(0).TextNode(0)
+    nametl = arrTestLayoutName(0)
+    desctl = arrTestLayoutDescript(0)
+    Call HTML.TextBoxQAD.VerifyTextBoxValue(txtNLLayout, nametl)
+    Call HTML.TextBoxQAD.VerifyTextBoxValue(txtNLDescription, desctl)
+    
+    Log.AppendFolder("VerifyValue: 'CreateFor' combobox")
+      If cmbNLCreateFor.innerText = "System" Then
+        Log.Message("VALIDATION PASSED: Value equal 'System'")    
+      Else 
+        Log.Warning("VALIDATION FAILED: Value does not equal 'System'")
+      End if
+    Log.PopLogFolder
+  Log.PopLogFolder
+
+  ' Check that it is not possible to leave the mandatory fields empty (the button 'Save' is inactive).
+  Log.AppendFolder("Check that it is not possible to leave the mandatory fields empty")
+    Call HTML.TextBoxQAD.FillTextBox(txtNLLayout, "")
+    Set btnLDSubmitBtn = HTML.ButtonQAD.FindButton_Proximity1(objNewLayoutDialog, "qadLDSubmitBtn")
+    If NOT HTML.ButtonQAD.IsButtonEnabled(btnLDSubmitBtn) Then
+      Log.Message("Is not possible to leave the mandatory fields empty.")
+    Else
+      Log.Warning("Is possible to leave the mandatory fields empty.")
+    End if
+  Log.PopLogFolder
+
+  ' Change the layout name 'Test Layout 01' and the layout description 'Test 01' and click on the button 'Save'
+  Log.AppendFolder("Change the layout name and description, click on the button 'Save'")
+    Call HTML.TextBoxQAD.FillTextBox(txtNLLayout, arrTestLayoutName(0))
+    Call HTML.TextBoxQAD.FillTextBox(txtNLDescription, arrTestLayoutDescript(0))
+    Set btnNLSubmit = HTML.ButtonQAD.FindButton_Proximity3(objNewLayoutDialog, "qadLDSubmitBtn")
+    Call HTML.ButtonQAD.ClickBtn(btnNLSubmit)
+    Call WEBUI.FlashMessageQAD.VerifyValueInToastContainer("Created")
+    AQUtils.Delay 5000
+  Log.PopLogFolder
+
+' PART 3
+'===============================================================================
 
 
-		' Check that name of the selected layout ('QAD System Default' ) on the toolbar has changed.
-		Log.AppendFolder("Check that name of the selected layout on the toolbar is correct")
-			Set btnToolbarSelectLayout = HTML.FindChildMethods.FromParent_Proximity1(objToolbar, "idStr", "qSelectLayoutToolbarButton", 2)
-			If btnToolbarSelectLayout.TextNode(1).innerText() = strTestLayoutName Then
-				Log.Message("Name of the selected layout on the toolbar is CORRECT")
-			Else
-				Log.Warning("Name of the selected layout on the toolbar is NOT CORRECT")
-			End If
-			btnToolbarSelectLayout.Click
-		Log.PopLogFolder
+  ' Check that name of the selected layout on the toolbar has changed.
+  Log.AppendFolder("Check that name of the selected layout on the toolbar is correct")
+    Set btnToolbarSelectLayout = HTML.FindChildMethods.FromParent_Proximity1(objToolbar, "idStr", "qSelectLayoutToolbarButton", 2)
+    If btnToolbarSelectLayout.TextNode(1).innerText() = arrTestLayoutName(0) Then
+      Log.Message("Name of the selected layout on the toolbar is CORRECT")
+    Else
+      Log.Warning("Name of the selected layout on the toolbar is NOT CORRECT")
+    End If
+    btnToolbarSelectLayout.Click
+  Log.PopLogFolder
 
-		' Check if pop-up window 'Select a Design Layout' is OPEN
-		Log.AppendFolder("Check if pop-up window 'Select a Design Layout' is OPEN")
-      Set objSelectLayoutDialog = FindDialog("qDesignLayoutSelectDialog")
-			If objSelectLayoutDialog.Exists Then 
-				Log.Message("Pop-up window 'Select a Design Layout' is OPEN")
-			Else
-				Log.Warning("Pop-up window 'Select a Design Layout' is NOT OPEN")
-			End If
-		Log.PopLogFolder
+  ' Check if pop-up window 'Select a Design Layout' is OPEN
+  Log.AppendFolder("Check if pop-up window 'Select a Design Layout' is OPEN")
+    Set objSelectLayoutDialog = FindDialog("qDesignLayoutSelectDialog")
+  Log.PopLogFolder
 
-		' Check that 'QAD System Default' is highlighted by default
-		Log.AppendFolder("Check that 'QAD System Default' is highlighted by default")
-			Set objTable = HTML.FindChildMethods.FromParent_Proximity1(objSelectLayoutDialog, "idStr", "qadLDLayoutList", 2)
-			strDefLayoutClass = objTable.Cell(1, 0).parentElement.className
-			If InStr(strDefLayoutClass, "selected") <> 0 Then
-				Log.Message("'QAD System Default' is highlighted by default")
-			Else
-				Log.Warning("'QAD System Default' is NOT highlighted by default")
-			End if
-		Log.PopLogFolder
+  ' Check that 'QAD System Default' is highlighted by default
+  Log.AppendFolder("Check that 'QAD System Default' is highlighted by default")
+    Set objTable = HTML.FindChildMethods.FromParent_Proximity1(objSelectLayoutDialog, "idStr", "qadLDLayoutList", 2)
+    strDefLayoutClass = objTable.Cell(1, 0).parentElement.className
+    If InStr(strDefLayoutClass, "selected") <> 0 Then
+      Log.Message("'QAD System Default' is highlighted by default")
+    Else
+      Log.Warning("'QAD System Default' is NOT highlighted by default")
+    End if
+  Log.PopLogFolder
 
-		' Check that the layout has been saved correctly.
-		Log.AppendFolder("Check that the layout has been saved correctly.")
-			intRowNumber = GetSLRowNumber(objTable, strTestLayoutName)
-			If NOT TypeName(intRowNumber) = "Boolean" Then 
-				Log.Message("Layout has been saved correctly.")
-			Else	
-				Log.Error("Layout has NOT been saved correctly.")
-			End if
-		Log.PopLogFolder
+  ' Check that the layout has been saved correctly.
+  Log.AppendFolder("Check that the layout has been saved correctly.")
+    varRowNumber = GetLayoutRowNumber(objTable, arrTestLayoutCreateFor(0), arrTestLayoutName(0), 0)
+    If NOT varRowNumber = 0 Then 
+      Log.Message("Layout has been saved correctly.")
+    Else  
+      Log.Error("Layout has NOT been saved correctly.")
+    End if
+  Log.PopLogFolder
 
-		' Save the information about layout 'QAD System Default' (layout name, description, active)
-		Log.AppendFolder("Check that it is possible to highlight other layout")
-			strQADSystemDefaultInfo(0) = objTable.Cell(intRowNumber, 0).innerText
-			strQADSystemDefaultInfo(1) = objTable.Cell(intRowNumber, 1).innerText
-			strQADSystemDefaultInfo(2) = objTable.Cell(intRowNumber, 2).innerText
-		Log.PopLogFolder
-		
-		' Select 'QAD System Default' (if not selected) to start editing and click on 'Continue' button
-		Log.AppendFolder("Select 'QAD System Default' to start editing and click on 'Continue' button")
-			Set objTableCell = objTable.Cell(intRowNumber, 0)
-			objTableCell.Click()
-			Set btnSLSubmit = HTML.ButtonQAD.FindButton_Proximity3(objSelectLayoutDialog, "qadLDSubmitBtn")
-			Call HTML.ButtonQAD.ClickBtn(btnSLSubmit)
-			AQUtils.Delay 1000
-		Log.PopLogFolder
+  ' Save the information about layout 'QAD System Default' (layout name, description, active)
+  Log.AppendFolder("Check that it is possible to highlight other layout")
+    arrQADSystemDefaultInfo("layout")   = objTable.Cell(varRowNumber, 0).innerText
+    arrQADSystemDefaultInfo("descript") = objTable.Cell(varRowNumber, 1).innerText
+    arrQADSystemDefaultInfo("active")   = objTable.Cell(varRowNumber, 2).innerText
+  Log.PopLogFolder
+  
+  ' Select 'QAD System Default' (if not selected) to start editing and click on 'Continue' button
+  Log.AppendFolder("Select 'QAD System Default' to start editing and click on 'Continue' button")
+    Set objTableCell = objTable.Cell(varRowNumber, 0)
+    objTableCell.Click()
+    Set btnSLSubmit = HTML.ButtonQAD.FindButton_Proximity3(objSelectLayoutDialog, "qadLDSubmitBtn")
+    Call HTML.ButtonQAD.ClickBtn(btnSLSubmit)
+    AQUtils.Delay 1000
+  Log.PopLogFolder
+  
+  ' Check is the warning message on the left top should NOT be visible
+  Log.AppendFolder("Check is the warning message on the left top should NOT be visible")
+    Set objDesignLayoutWorkspace = HTML.PanelQAD.FindPanel_Proximity1(objViewContainer, "qDesignLayoutWrapper")
+    Set objWarningMessage = objDesignLayoutWorkspace.Find("contentText", strMessage, 3)
+    If NOT objWarningMessage.Exists Then 
+      Log.Message("Warning message on the left top is NOT visible")
+    Else 
+      Log.Warning("Warning message on the left top is visible")
+    End if
+  Log.PopLogFolder
 
-		' Check is the warning message on the left top should NOT be visible
-		Log.AppendFolder("Check is the warning message on the left top should NOT be visible")
+  ' Check that information on the toolbar has changed.
+  Log.AppendFolder("Check that information on the toolbar has changed.")
+    ' Check that maintenance function on the toolbar is correct.
+    Log.AppendFolder("Check that maintenance function on the toolbar is correct.")
+      
+    Log.PopLogFolder
+    
+    ' Check that name of the selected layout on the toolbar has changed.
+    Log.AppendFolder("Check that name of the selected layout on the toolbar is correct")
+      Set btnToolbarSelectLayout = HTML.FindChildMethods.FromParent_Proximity1(objToolbar, "idStr", "qSelectLayoutToolbarButton", 2)
+      If btnToolbarSelectLayout.TextNode(1).innerText() = arrQADSystemDefaultInfo("layout") Then
+        Log.Message("Name of the selected layout on the toolbar is CORRECT")
+      Else
+        Log.Warning("Name of the selected layout on the toolbar is NOT CORRECT")
+      End If
+    Log.PopLogFolder
+  Log.PopLogFolder
+  
+  ' Check that the background has changed into Grid mode
+  Log.AppendFolder("Check that the background has changed into Grid mode")
+    strBGFileName = GetStyle(objDesignLayoutWrapper.Section(0), "background-image")
+    ' strBGFileName = Replace(Replace(strBGFileName, """)", ""), "url(""", "")
+    If (NOT strBGFileName = "none") AND (NOT strBGFileName = "") Then 
+      Log.Message("Background has changed into Grid mode")
+    Else 
+      Log.Warning("Background has NOT changed into Grid mode")
+    End if
+  Log.PopLogFolder
+  
+  ' Check that the button 'Save' is available (instead of 'Save As').
+  Log.AppendFolder("Check that the button 'Save' is available (instead of 'Save As')")
+    Set btnFooterSave = HTML.ButtonQAD.FindButton_Proximity1(objDesignLayoutWrapper, "ToolBtnSave")
+    If NOT Trim(LCase(btnFooterSave.innerText)) = "save as" Then
+      Log.Message("Button 'Save' is available")
+    Else
+      Log.Warning("Button 'Save As' is available")
+    End If
+  Log.PopLogFolder
 
-		  	Set objDesignLayoutWorkspace = HTML.PanelQAD.FindPanel_Proximity1(objViewContainer, "qDesignLayoutWrapper")
-			Set objWarningMessage = objDesignLayoutWorkspace.Find("contentText", "Changes must be saved as a new layout.", 3)
-			If objWarningMessage.Exists Then 
-				Log.Message("Warning message on the left top is NOT visible")
-			Else 
-				Log.Warning("Warning message on the left top is visible")
-			End if
+  ' Check the side panel 'Set Layout Properties'. Information about the current layout should be correct.
+  Log.AppendFolder("Check if the current layout information in the side panel is correct.")
+    Set objLayoutProperties = HTML.PanelQAD.FindPanel_Proximity1(objDesignLayoutWrapper, "qDesignLayoutPropertiesPanel")
+    arrLPTextBoxes = objLayoutProperties.FindAllChildren("tagName", "input", 5)
+    Set txtLPLayout = GetTextBoxObj(arrLPTextBoxes, "Layout")
+    Set txtLPDescription = GetTextBoxObj(arrLPTextBoxes, "Description")
+    ' Set txtLPActive = GetTextBoxObj(arrLPTextBoxes, "Active")
+    Set txtLPCreatedFor = GetTextBoxObj(arrLPTextBoxes, "CreatedFor")
+    Call HTML.TextBoxQAD.VerifyTextBoxValue(txtLPLayout, arrQADSystemDefaultInfo("layout"))
+    Call HTML.TextBoxQAD.VerifyTextBoxValue(txtLPDescription, arrQADSystemDefaultInfo("descript"))
+    ' Call HTML.TextBoxQAD.VerifyTextBoxValue(txtLPActive, arrQADSystemDefaultInfo("active"))
+    Call HTML.TextBoxQAD.VerifyTextBoxValue(txtLPCreatedFor, arrQADSystemDefaultInfo("create"))
+  Log.PopLogFolder
 
-		Log.PopLogFolder
+  ' Check that only the layout name ('Layout') and the layout description ('Description') fields are available for editing.
+  Log.AppendFolder("Check the information in the side panel 'Set Layout Properties'")
+    Call ChekTextBoxOnDisable(txtLPLayout, false)
+    Call ChekTextBoxOnDisable(txtLPDescription, false)
+    ' Call ChekTextBoxOnDisable(GetTextBoxObj(arrLPTextBoxes, "Active"), true)
+    Call ChekTextBoxOnDisable(txtLPCreatedFor, true)
+  Log.PopLogFolder
+  
 
-		' Find Panels in the Design Leyout
-		Log.AppendFolder("Find Panels in the Design Leyout")
-			Set objPage = Sys.Browser("*").Page("*")
-			Set objMainContainer = HTML.PanelQAD.FindPanel_Proximity1(objPage, "qMainContainer")
-			Set objViewContainer = HTML.PanelQAD.FindPanel_Proximity1(objMainContainer, "QADViewContainer")
-			Set objToolbar =  HTML.PanelQAD.FindPanel_Proximity1(objViewContainer, "KToolBar_DesignToolbar")
-			Set objDesignLayoutWrapper = HTML.PanelQAD.FindPanel_Proximity1(objViewContainer, "qDesignLayoutWrapper")
-		Log.PopLogFolder
-		
-		' Checks if the correct URL after the submmit.
-		Log.AppendFolder("Checks if the correct URL after the submmit.")
-			If NOT objSelectLayoutDialog.Exists Then 
-				Log.Message("Select Layout Dialog is CLOSED")
-			Else
-				Log.Warning("Select Layout Dialog is NOT CLOSED")
-			End If
-			If CheckSelectedLayout(UrlDecode(objPage.URL), strQADSystemDefaultInfo(0)) Then
-				Log.Message("URL is CORRECT")
-			Else
-				Log.Warning("URL is NOT CORRECT")
-			End If
-		Log.PopLogFolder
+' PART 4
+'===============================================================================
 
-		' Check that information on the toolbar has changed.
-		Log.AppendFolder("Check that information on the toolbar has changed.")
-			' Check that maintenance function on the toolbar is correct.
-			Log.AppendFolder("Check that maintenance function on the toolbar is correct.")
-				
-			Log.PopLogFolder
-			
-			' Check that name of the selected layout ('QAD System Default' ) on the toolbar has changed.
-			Log.AppendFolder("Check that name of the selected layout on the toolbar is correct")
-				Set btnToolbarSelectLayout = HTML.FindChildMethods.FromParent_Proximity1(objToolbar, "idStr", "qSelectLayoutToolbarButton", 2)
-				If btnToolbarSelectLayout.TextNode(1).innerText() = strQADSystemDefaultInfo(0) Then
-					Log.Message("Name of the selected layout on the toolbar is CORRECT")
-				Else
-					Log.Warning("Name of the selected layout on the toolbar is NOT CORRECT")
-				End If
-			Log.PopLogFolder
-		Log.PopLogFolder
-		
-		' Check that the background has changed into Grid mode
-		Log.AppendFolder("Check that the background has changed into Grid mode")
-			strBGFileName = GetStyle(objDesignLayoutWrapper.Section(0), "background-image")
-			' strBGFileName = Replace(Replace(strBGFileName, """)", ""), "url(""", "")
-			If (NOT strBGFileName = "none") AND (NOT strBGFileName = "") Then 
-				Log.Message("Background has changed into Grid mode")
-			Else 
-				Log.Warning("Background has NOT changed into Grid mode")
-			End if
-		Log.PopLogFolder
-		
-		' Check that the button 'Save As' is available (instead of 'Save').
-		Log.AppendFolder("Check that the button 'Save As' is available (instead of 'Save')")
-			Set btnFooterSave = HTML.ButtonQAD.FindButton_Proximity1(objDesignLayoutWrapper, "ToolBtnSave")
-			If Trim(btnFooterSave.innerText) = "Save as" Then
-				Log.Message("Check that the button 'Save As' is available")
-			Else
-				Log.Warning("Check that the button 'Save' is available")
-			End If
-		Log.PopLogFolder
 
-		' Check the side panel 'Set Layout Properties'. Information about the current layout should be correct.
-		Log.AppendFolder("Check if the current layout information in the side panel is correct.")
-			Set objDesignLayoutPropertiesPanel = HTML.PanelQAD.FindPanel_Proximity1(objDesignLayoutWrapper, "qDesignLayoutPropertiesPanel")
-			arrLPTextBoxes = objDesignLayoutPropertiesPanel.FindAllChildren("tagName", "input", 5)
-			Set txtLPLayout = GetTextBoxObj(arrLPTextBoxes, "Layout")
-			Set txtLPDescription = GetTextBoxObj(arrLPTextBoxes, "Description")
-			Set txtLPActive = GetTextBoxObj(arrLPTextBoxes, "Active")
-			Set txtLPCreatedFor = GetTextBoxObj(arrLPTextBoxes, "CreatedFor")
-			Call HTML.TextBoxQAD.VerifyTextBoxValue(txtLPLayout, strQADSystemDefaultInfo(0))
-			Call HTML.TextBoxQAD.VerifyTextBoxValue(txtLPDescription, strQADSystemDefaultInfo(1))
-			Call HTML.TextBoxQAD.VerifyTextBoxValue(txtLPActive, strQADSystemDefaultInfo(2))
-			Call HTML.TextBoxQAD.VerifyTextBoxValue(txtLPCreatedFor, strQADSystemDefaultInfo(3))
-		Log.PopLogFolder
+  ' Open Ellipses menu on the toolbar, and click on the icon 'New layout' and check that new pop-up window appears
+  Log.AppendFolder("Open 'New layout' dialog and check that new pop-up window appears")
+    Call ClickTBDropDown(objToolbar, "ToolBtnNew")
+    Set objNewLayoutDialog = FindDialog("qDesignLayoutNewLayout")
+  Log.PopLogFolder
+  
+  ' Enter the Layout = 'Test Layout 02', Description = 'Test 02', Create For = 'Domain name'
+  Log.AppendFolder("Enter the Layout = 'Test Layout 02', Description = 'Test 02', Create For = 'Domain name")
+    arrNLTextBoxes = objNewLayoutDialog.FindAllChildren("tagName", "input", 5)
+    Set txtNLLayout = GetTextBoxObj(arrNLTextBoxes, "Layout")
+    Set txtNLDescription = GetTextBoxObj(arrNLTextBoxes, "Description")
+    Call HTML.TextBoxQAD.FillTextBox(txtNLLayout, arrTestLayoutName(1))
+    Call HTML.TextBoxQAD.FillTextBox(txtNLDescription, arrTestLayoutDescript(1))
+  Log.PopLogFolder
 
-		' Check that only the layout name ('Layout') and the layout description ('Description') fields are available for editing.
-		Log.AppendFolder("Check the information in the side panel 'Set Layout Properties'")
-			Call ChekInputOnDisable(txtLPLayout, false)
-			Call ChekInputOnDisable(txtLPDescription, false)
-			Call ChekInputOnDisable(GetTextBoxObj(arrLPTextBoxes, "Active"), true)
-			Call ChekInputOnDisable(GetTextBoxObj(arrLPTextBoxes, "CreatedFor"), true)
-		Log.PopLogFolder
+  ' Select one of available layouts from the list below 'Select Existing Template'
+  Log.AppendFolder("Select one of available layouts from the list below 'Select Existing Template'")
+    Set cmbNLCreateFor = objNewLayoutDialog.Panel(1).Panel(2).Panel(0)
+    Call ComboboxSelectItemKeys(cmbNLCreateFor, arrTestLayoutCreateFor(1))
+    Set objNLTable = HTML.FindChildMethods.FromParent_Proximity1(objNewLayoutDialog, "idStr", "qadLDLayoutList", 5)
+    If objNLTable.RowCount > 1 Then 
+      objNLTable.Cell(1,0).Checkbox(0).Click
+    End if
+    Set btnNLSubmit = HTML.ButtonQAD.FindButton_Proximity3(objNewLayoutDialog, "qadLDSubmitBtn")
+    Call HTML.ButtonQAD.ClickBtn(btnNLSubmit)
+    Call WEBUI.FlashMessageQAD.VerifyValueInToastContainer("Created")
+    AQUtils.Delay 1000
+  Log.PopLogFolder
+  
+  ' Check that the layout has saved correctly.
+  Log.AppendFolder("Check that the layout has saved correctly.")
+    Set btnFooterSave = HTML.ButtonQAD.FindButton_Proximity1(objDesignLayoutWrapper, "ToolBtnSave")
+    Call HTML.ButtonQAD.ClickBtn(btnFooterSave)
+    ' Check that name of the selected layout ('QAD System Default' ) on the toolbar has changed.
+    Set btnToolbarSelectLayout = HTML.FindChildMethods.FromParent_Proximity1(objToolbar, "idStr", "qSelectLayoutToolbarButton", 2)
+    If btnToolbarSelectLayout.TextNode(1).innerText() = arrTestLayoutName(1) Then
+      Log.Message("Name of the selected layout on the toolbar is CORRECT")
+    Else
+      Log.Warning("Name of the selected layout on the toolbar is NOT CORRECT")
+    End If
+    btnToolbarSelectLayout.Click
+    ' Check if pop-up window 'Select a Design Layout' is OPEN
+    Set objSelectLayoutDialog = FindDialog("qDesignLayoutSelectDialog")
+    ' Check that the layout has been saved correctly.
+    Set objTable = HTML.FindChildMethods.FromParent_Proximity1(objSelectLayoutDialog, "idStr", "qadLDLayoutList", 2)
+    varRowNumber = GetLayoutRowNumber(objTable, arrTestLayoutCreateFor(1), arrTestLayoutName(1), 0)
+    If NOT varRowNumber = 0 Then 
+      Log.Message("Layout has been saved correctly.")
+    Else
+      Log.Error("Layout has NOT been saved correctly.")
+    End if
+    Set btnSLClose = HTML.ButtonQAD.FindButton_Proximity3(objSelectLayoutDialog, "qadLDCancelBtn")
+    Call HTML.ButtonQAD.ClickBtn(btnSLClose)
+  Log.PopLogFolder
 
-		' Change the layout name ('Layout' = Test Layout 01) and the layout description ('Description' = Test 01)
-		Log.AppendFolder("Change the value of layout name and the layout description")
-			Call HTML.TextBoxQAD.FillTextBox(txtLPLayout, strTestLayoutName)
-			Call HTML.TextBoxQAD.FillTextBox(txtLPDescription, strTestLayoutDescript)
-		Log.PopLogFolder
 
-		' Click on the button 'Save As' and check that a new pop-up window appears.
-		Log.AppendFolder("Click on the button 'Save As' and check that a new pop-up window appears.")
-			btnFooterSave.Click
-			Set objNewLayoutDialog = FindDialog("qDesignLayoutNewLayout")
-			If objNewLayoutDialog.Exists Then
-				Log.Message("New pop-up window 'New layout' appears")
-			Else
-				Log.Warning("New pop-up window 'New layout' NOT appears ")
-			End If
-		Log.PopLogFolder
+' PART 5 (Manage Active Layouts)
+'===============================================================================
 
-		' 
-		Log.AppendFolder("")
-			
-		Log.PopLogFolder
-		
-		' 
-		Log.AppendFolder("")
-			
-		Log.PopLogFolder
-		
-		' 
-		Log.AppendFolder("")
-			
-		Log.PopLogFolder
-		
-		' 
-		Log.AppendFolder("")
-			
-		Log.PopLogFolder
+  ' Click on the 'Manage Active Layouts' and check that a new pop-up window appears
+  Log.AppendFolder("Click on the 'Manage Active Layouts' and check that a new pop-up window appears")
+    Call ClickTBDropDown(objToolbar, "ToolBtnManage")
+    Set objManageActiveDialog = FindDialog("qDesignLayoutManageDialog")
+  Log.PopLogFolder
 
-	Log.PopLogFolder
+  ' Check available layouts in the list. One and only one 'System' layout must be always active
+  Log.AppendFolder("Check available layouts in the list. One and only one 'System Wide' layout must be always active")
+    Set objSystemTable = HTML.FindChildMethods.FromParent_Proximity1(objManageActiveDialog, "idStr", "qadLDLayoutList", 2)
+    
+    intSysTableCount = objSystemTable.firstElementChild.childElementCount - 2
+    bolOneEl = false
+
+    ' Log.AppendFolder("Check the active column of each item")
+    '   arrTableValues = MAParseTable(objSystemTable)
+  '     For i = 0 To UBound(arrTableValues)
+  '       ActiveColumnChecking(arrTableValues(i))
+  '     Next
+  '   Log.PopLogFolder
+    
+    ' Check if one and only one 'System' layout is active
+    Log.AppendFolder("Check if one and only one 'System' layout is active")
+      For i = 1 To intSysTableCount
+        If objSystemTable.Cell(i, 0).Checkbox(0).checked Then
+          If bolOneEl Then
+            Log.Error("More than one 'System' layout is active.")
+            Exit For
+          Else
+            bolOneEl = true
+            intActiveItemNumber = i
+          End if
+        End if
+      Next
+
+      If NOT bolOneEl Then
+        Log.Error("No 'System' layout is still active.")
+      End if
+    Log.PopLogFolder
+
+    ' Check if active 'System' layout is not change their status to inactive
+    Log.AppendFolder("Check if active 'System' layout is not change their status to inactive")
+      Set objPreActive = objSystemTable.Cell(intActiveItemNumber, 0).Checkbox(0)
+      objPreActive.Click
+      If NOT objPreActive.checked Then
+        Log.Error("One and only one 'System Wide' layout must be always active.")
+      End if
+    Log.PopLogFolder
+
+    ' Check if active 'System' layout changed
+    Log.AppendFolder("Check if active 'System' layout changed")
+      varRowNumber = GetLayoutRowNumber(objSystemTable, arrTestLayoutCreateFor(0), arrTestLayoutName(0), 1)
+      If NOT varRowNumber = 0 Then
+        ' Check if inactive 'System' layout change their status to active
+        Set objNewActive = objSystemTable.Cell(varRowNumber, 0).Checkbox(0)
+        objNewActive.Click
+        If NOT objNewActive.checked Then
+          Log.Error("One and only one 'System Wide' layout must be always active.")
+        End if
+        ' Check if active 'System' layout change their status to inactive
+        If objPreActive.checked Then
+          Log.Error("The previous active one should be set as inactive.")
+        End if
+      Else
+        Log.Warning("Layout " & arrTestLayoutName(0) & " not found ")
+      End if
+    Log.PopLogFolder
+
+    ' Check if any layout change their status to active
+    Log.AppendFolder("Check if any layout change their status to active")
+      varRowNumber = GetLayoutRowNumber(objSystemTable, arrTestLayoutCreateFor(1), arrTestLayoutName(1), 1)
+      If NOT varRowNumber = 0 Then
+        Set objNewActive = objSystemTable.Cell(varRowNumber, 0).Checkbox(0)
+        Call ScrollDown(objSystemTable.Parent, objNewActive)
+        objNewActive.Click
+        If NOT objNewActive.checked Then
+          Log.Error("One and only one 'System Wide' layout must be always active.")
+        End if
+      Else
+        Log.Warning("Layout " & arrTestLayoutName(1) & " not found ")
+      End if
+    Log.PopLogFolder
+  Log.PopLogFolder
+
+  ' Click on the button “Apply” to continue and check that a new pop-up window appears
+  Log.AppendFolder("Click on the button “Apply” to continue and check that a new pop-up window appears")
+    Set btnMAApply = HTML.ButtonQAD.FindButton_Proximity3(objManageActiveDialog, "qadLDSubmitBtn")
+    btnMAApply.Click
+    Set objConfirmModalDialog = FindDialog("qModalDialog")
+  Log.PopLogFolder
+
+  ' Check that all information is correct 
+  Log.AppendFolder("Check that all information in the confirm pop-up window is correct")
+    bolIsConfirmInfo = true
+
+    arrCAListItems = objConfirmModalDialog.FindAllChildren("tagName", "li", 5)
+    If UBound(arrCAListItems) = UBound(arrTestLayoutName) Then
+      For i = 0 To UBound(arrCAListItems)
+        strCAListItem = LCase(Trim(arrCAListItems(UBound(arrCAListItems) - i).innerText))
+        If InStr(strCAListItem, LCase(arrTestLayoutName(i))) = 0 Then 
+          bolIsConfirmInfo = false
+        End if
+        If InStr(strCAListItem, LCase(arrTestLayoutCreateFor(i))) = 0 Then 
+          bolIsConfirmInfo = false
+        End if
+      Next
+    Else
+      bolIsConfirmInfo = false
+      Log.Warning("Wrong number of items in the confirm pop-up window.")
+    End if
+
+    If bolIsConfirmInfo Then 
+        Log.Message("Information in the confirm pop-up window is correct")
+    Else
+        Log.Warning("Information in the confirm pop-up window is NOT correct")
+    End if
+
+    Set btnMConfirm = HTML.ButtonQAD.FindButton_Proximity3(objConfirmModalDialog, "qModalDialogConfirm")
+    Call HTML.ButtonQAD.ClickBtn(btnMConfirm)
+    Call WEBUI.FlashMessageQAD.VerifyValueInToastContainer("Updated")
+
+    Set btnToolbarSelectLayout = HTML.FindChildMethods.FromParent_Proximity1(objToolbar, "idStr", "qSelectLayoutToolbarButton", 2)
+    btnToolbarSelectLayout.Click
+    AQUtils.Delay 1000
+    Set objSelectLayoutDialog = FindDialog("qDesignLayoutSelectDialog")
+    SLDRowsChecking(objSelectLayoutDialog)
+    Set btnSLClose = HTML.ButtonQAD.FindButton_Proximity3(objSelectLayoutDialog, "qadLDCancelBtn")
+    Call HTML.ButtonQAD.ClickBtn(btnSLClose)
+  Log.PopLogFolder
+
+' PART 6 (delete)
+'===============================================================================
+
+  ' Click on 'Delete Layout' and check that a new pop-up window appears
+  Log.AppendFolder("Click on 'Delete Layout' and check that a new pop-up window appears")
+    Call ClickTBDropDown(objToolbar, "ToolBtnDelete")
+    Set objDeleteLayoutDialog = FindDialog("qModalDialog")
+  Log.PopLogFolder
+
+  ' Click on the button 'Delete' to confirm. Check that a green flash message 'Deleted' displays in the upper right corner.
+  Log.AppendFolder("Click on the button 'Delete' to confirm. Check that a green flash message 'Deleted' displays.")
+    Set btnDLSubmit = HTML.ButtonQAD.FindButton_Proximity3(objDeleteLayoutDialog, "qModalDialogConfirm")
+    Call HTML.ButtonQAD.ClickBtn(btnDLSubmit)
+    Call WEBUI.FlashMessageQAD.VerifyValueInToastContainer("Deleted")
+    AQUtils.Delay 1000
+  Log.PopLogFolder
+
+  ' Check that 'Delete Layout' option is disabled in case 'QAD factory Default' layout
+  Log.AppendFolder("Check that 'Delete Layout' option is disabled in case 'QAD factory Default' layout")
+    ' TODO
+    Set btnToolbarMore = HTML.LinkQAD.FindLink_Proximity1(objToolbar, "qMoreToolbarButton")
+    Call HTML.ButtonQAD.ClickBtn(btnToolbarMore)
+    arrProperties = Array("innerHTML")
+    arrValues = Array("*id=" & chr(34) & "ToolBtnNew" & chr(34) & "*")
+    Set objTBDropDownList = HTML.FindChildMethods.FromParent_Proximity1(objPage, arrProperties, arrValues, 30) 'Floating window, it has no idStr !!!
+    Set lnkToolBarItem = HTML.FindChildMethods.FromParent_Proximity1(objPage, "idStr", "ToolBtnDelete", 2)
+    If NOT lnkToolBarItem.Exists Then 
+      Log.Warning("'Delete Layout' option is anable in case 'QAD factory Default' layout")
+    Else
+      Log.Message("'Delete Layout' option is disabled in case 'QAD factory Default' layout")
+    End if
+  Log.PopLogFolder
+
+  ' Check that layout has been deleted
+  Log.AppendFolder("Check that layout has been deleted")
+    Set btnToolbarSelectLayout = HTML.FindChildMethods.FromParent_Proximity1(objToolbar, "idStr", "qSelectLayoutToolbarButton", 2)
+    Call HTML.ButtonQAD.ClickBtn(btnToolbarSelectLayout)
+    Set objSelectLayoutDialog = FindDialog("qDesignLayoutSelectDialog")
+    Set objTable = HTML.FindChildMethods.FromParent_Proximity1(objSelectLayoutDialog, "idStr", "qadLDLayoutList", 2)
+    varRowNumber = GetLayoutRowNumber(objTable, arrTestLayoutCreateFor(1), arrTestLayoutName(1), 0)
+    If varRowNumber = 0 Then
+      Log.Message("Layout has been deleted.")
+    Else
+      Log.Warning("Layout has NOT been deleted.")
+    End if
+  Log.PopLogFolder
+
+' PART 7 (Change Layout)
+'===============================================================================
+
+  ' Check that is it possible to create a new layout from this window
+  Log.AppendFolder("Check that is it possible to create a new layout from this window")
+    Set btnSLAddLayout = HTML.FindChildMethods.FromParent_Proximity1(objSelectLayoutDialog, "idStr", "AddLayout", 2)
+    Call HTML.ButtonQAD.ClickBtn(btnSLAddLayout)
+    AQUtils.Delay 2000
+    Set objAddLayoutDialog = FindDialog("qDesignLayoutNewLayout")
+    Set btnALClose = HTML.ButtonQAD.FindButton_Proximity3(objAddLayoutDialog, "qadLDCancelBtn")
+    Call HTML.ButtonQAD.ClickBtn(btnALClose)
+  Log.PopLogFolder
+
+  ' Click on layout name and then on the button “Continue”
+  Log.AppendFolder("Click on layout name and then on the button “Continue”")
+    varRowNumber = GetLayoutRowNumber(objTable, arrTestLayoutCreateFor(0), arrTestLayoutName(0), 0)
+    Set objTableCell = objTable.Cell(varRowNumber, 0)
+    objTableCell.Click()
+    Set btnSLSubmit = HTML.ButtonQAD.FindButton_Proximity3(objSelectLayoutDialog, "qadLDSubmitBtn")
+    Call HTML.ButtonQAD.ClickBtn(btnSLSubmit)
+    AQUtils.Delay 2000
+  Log.PopLogFolder
+
+  ' Check the layout name on the toolbar.
+  Log.AppendFolder("Check the layout name on the toolbar.")
+    Set btnToolbarSelectLayout = HTML.FindChildMethods.FromParent_Proximity1(objToolbar, "idStr", "qSelectLayoutToolbarButton", 2)
+    strTBButtonLayoutName = btnToolbarSelectLayout.innerText
+    If InStr(strTBButtonLayoutName, arrTestLayoutName(0)) Then
+      Log.Message("layout has changed")
+    Else
+      Log.Warning("layout has NOT changed")
+    End if
+  Log.PopLogFolder
+
+  ' temp
+  Log.AppendFolder("temp")
+    Call ClickTBDropDown(objToolbar, "ToolBtnDelete")
+    Set objDeleteLayoutDialog = FindDialog("qModalDialog")
+    Set btnDLSubmit = HTML.ButtonQAD.FindButton_Proximity3(objDeleteLayoutDialog, "qModalDialogConfirm")
+    Call HTML.ButtonQAD.ClickBtn(btnDLSubmit)
+    Call WEBUI.FlashMessageQAD.VerifyValueInToastContainer("Deleted")
+    AQUtils.Delay 1000
+  Log.PopLogFolder
+
 End sub

@@ -1,4 +1,70 @@
 ﻿'===============================================================================
+' Function: ClickTBDropDown
+' 
+' Description: 
+'   
+' Parameters:
+'   Object - objToolbar : 
+'   String - strIdItem : 
+' 
+'===============================================================================
+Sub ClickTBDropDown(objToolbar, strIdItem)
+
+    Set objPage = Aliases.browser.page
+    
+    Set btnToolbarMore = HTML.LinkQAD.FindLink_Proximity1(objToolbar, "qMoreToolbarButton")
+    Call HTML.ButtonQAD.ClickBtn(btnToolbarMore)
+
+    ' Find the floating window
+    arrProperties = Array("innerHTML")
+    arrValues = Array("*id=" & chr(34) & strIdItem & chr(34) & "*")
+    Set objParent = HTML.FindChildMethods.FromParent_Proximity1(objPage, arrProperties, arrValues, 30) 'Floating window, it has no idStr !!!
+
+    ' Find the child link and click on it
+    Set lnkToolBarItem = HTML.LinkQAD.FindLink_Proximity1(objParent, strIdItem)
+    Call HTML.LinkQAD.ClickLink(lnkToolBarItem)
+
+End sub
+
+'===============================================================================
+' Function: ComboboxSelectItemKeys
+' 
+' Description: 
+'   
+' Parameters:
+'   Object - cmbComboBox : 
+'   String - strItem : 
+' 
+'===============================================================================
+Sub ComboboxSelectItemKeys(cmbComboBox, strItem)
+
+    Log.AppendFolder("Select item in 'Create for'")
+        cmbComboBox.Click
+
+        intCmbLenght = cmbComboBox.Select(0).wItemCount
+        strCmbItem = cmbComboBox.TextNode(0).innerText
+
+        For i = 0 To intCmbLenght - 1 
+      
+      Log.Message(strCmbItem)
+      
+            If strCmbItem = strItem Then
+                cmbComboBox.Keys("[Enter]")
+                Exit for
+            Else
+                If i = intCmbLenght - 1 Then 
+                    Log.Error("The name of item is not correct")
+                Else
+                    cmbComboBox.Keys("[Down]")
+                    strCmbItem = cmbComboBox.TextNode(0).innerText
+                End if
+            End if
+        Next
+    Log.PopLogFolder
+
+End sub
+
+'===============================================================================
 ' Function: GetTextBoxObj
 ' 
 ' Description: 
@@ -9,21 +75,23 @@
 ' 
 '===============================================================================
 Function GetTextBoxObj(arrTextBoxes, strName)
-  For i = 0 To UBound(arrTextBoxes)
-    If LCase(arrTextBoxes(i).ObjectIdentifier) = LCase(strName) Then
-      Set GetTextBoxObj = arrTextBoxes(i)
-      Exit For
-    Else
-      If i = UBound(arrTextBoxes) Then
-        GetTextBoxObj = false
-      End if
-    End if
-  Next
+
+    For i = 0 To UBound(arrTextBoxes)
+        If LCase(arrTextBoxes(i).ObjectIdentifier) = LCase(strName) Then
+            Set GetTextBoxObj = arrTextBoxes(i)
+            Exit For
+        Else
+            If i = UBound(arrTextBoxes) Then
+                GetTextBoxObj = false
+            End if
+        End if
+    Next
+
 End Function
 
 
 '===============================================================================
-' Sub: ChekInputOnDisable
+' Sub: ChekTextBoxOnDisable
 ' 
 ' Description: 
 '   
@@ -32,12 +100,14 @@ End Function
 '   Boolean - bolInvert : 
 ' 
 '===============================================================================
-Sub ChekInputOnDisable(txtInput, bolInvert)
-    If NOT (aqObject.GetPropertyValue(txtInput, "readonly") AND bolInvert) Then
-      Log.Message("Layput """ & txtInput.ObjectIdentifier &""" is available for editing")
-    Else
-      Log.Message("Layput """ & txtInput.ObjectIdentifier &""" is disable for editing")
-    End if
+Sub ChekTextBoxOnDisable(txtInput, bolInvert)
+
+        If NOT (aqObject.GetPropertyValue(txtInput, "readonly") AND bolInvert) Then
+            Log.Message("Layput """ & txtInput.ObjectIdentifier &""" is available for editing")
+        Else
+            Log.Message("Layput """ & txtInput.ObjectIdentifier &""" is disable for editing")
+        End if
+
 End Sub
 
 '===============================================================================
@@ -55,24 +125,24 @@ End Sub
 '===============================================================================
 Function GetStyle(objElement, strStyleProp)
 
-  Dim document, style
-  Set document = objElement.ownerDocument
-  If aqObject.IsSupported(document, "defaultView") Then
-    ' Internet Explorer 9+, Firefox, Chrome, Safari, Opera
-    Set style = document.defaultView.getComputedStyle(objElement, "")
-    getStyle = style.getPropertyValue(strStyleProp)
-  Else
-    ' Internet Explorer 7 - 8
-    getStyle = objElement.currentStyle.getPropertyValue(strStyleProp)
-  End If
+    Dim document, style
+    Set document = objElement.ownerDocument
+    If aqObject.IsSupported(document, "defaultView") Then
+        ' Internet Explorer 9+, Firefox, Chrome, Safari, Opera
+        Set style = document.defaultView.getComputedStyle(objElement, "")
+        getStyle = style.getPropertyValue(strStyleProp)
+    Else
+        ' Internet Explorer 7 - 8
+        getStyle = objElement.currentStyle.getPropertyValue(strStyleProp)
+    End If
 
 End Function
 
 '===============================================================================
 ' Sub: ScrollDown
 ' 
-' Description: 	Scrolls down to a value equal to the height of the objScrollBox, 
-' 				until the objElement is not visible on the screen.
+' Description:  Scrolls down to a value equal to the height of the objScrollBox, 
+'               until the objElement is not visible on the screen.
 '   
 ' Parameters:
 '   Object - an object with scrollbar.
@@ -81,37 +151,13 @@ End Function
 '===============================================================================
 Sub ScrollDown(objScrollBox, objElement) 
 
-  If Not objElement.VisibleOnScreen Then
-    Log.Message("Not objElement.VisibleOnScreen")
-    If objScrollBox.scrollTop < objScrollBox.scrollHeight Then
-    	objScrollBox.scrollTop = objScrollBox.scrollTop + objScrollBox.height
-    Else
-    	Log.Warning("Item is NOT EXISTS")
+    If Not objElement.VisibleOnScreen Then
+        If objScrollBox.scrollTop < objScrollBox.scrollHeight Then
+            objScrollBox.scrollTop = objScrollBox.scrollTop + objScrollBox.height
+        Else
+            Log.Warning("Item is NOT EXISTS")
+        End if
+        Call ScrollDown(objScrollBox, objElement)
     End if
-    Call ScrollDown(objScrollBox, objElement)
-  End if
 
 End sub
-
-'===============================================================================
-' Function: UrlDecode
-'   Decoding URL encoded UTF-8
-'
-' Description:
-'   Decoding URL encoded UTF-8
-' 
-' Parameters:
-'   String - encoded URL
-' 
-' Returns: 
-'   String - decoded URL
-' 
-'===============================================================================
-Function UrlDecode(s)
-  	Dim JSEngine
-  	Set JSEngine = CreateObject("MSScriptControl.ScriptControl")
-    JSEngine.Language = "JScript"
-
-    UrlDecode = Replace(s, "+", " ")
-    UrlDecode = JSEngine.CodeObject.decodeURIComponent(UrlDecode)
-End Function

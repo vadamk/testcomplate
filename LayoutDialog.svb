@@ -1,6 +1,124 @@
 ﻿'USEUNIT CommonFunction
 
 '===============================================================================
+' Function:  GetLayoutRowNumber
+'
+' Description:  
+'   
+' Parameters:
+'   Object - objTable : table object in which we are search.
+'   String - strCreateForName : the name of the category in which you want to find item
+'   String - strLayoutName : name of the item you want to find
+'   Iteger - intColumn : number column with the name of layout
+' 
+' Returns: 
+'   Integer - Row Number (0 if not found)
+'           
+'===============================================================================
+
+Function GetLayoutRowNumber(objTable, strCreateForName, strLayoutName, intColumn)
+
+  Log.AppendFolder("Get select layout dialog row number")
+
+  intCategoryColumnNumber = 0
+
+  For i = 0 To objTable.RowCount - 1 
+    If (objTable.Cell(i, 0).colSpan = 3) AND InStr(objTable.Cell(i, 0).contentText, strCreateForName) Then
+      intCategoryColumnNumber = i + 1
+      Exit For
+    Else
+      If i = (objTable.RowCount - 1) Then
+        Log.Message("Category " & strCreateForName & " not found ")
+        GetLayoutRowNumber = 0
+        Log.PopLogFolder
+        Exit Function
+      End If
+    End if
+  Next
+
+  For i = intCategoryColumnNumber To objTable.RowCount - 1
+    If objTable.Cell(i, 0).colSpan = 1 Then 
+      If LCase(Trim(objTable.Cell(i, intColumn).innerText)) = LCase(strLayoutName) Then
+        GetLayoutRowNumber = i
+        Exit For
+      Else
+        If i = (objTable.RowCount - 1) Then
+          Log.Message("Layout " & strCreateForName & " not found ")
+          GetLayoutRowNumber = 0
+        End if
+      End if
+    End if
+  Next
+
+  Log.PopLogFolder
+
+End Function
+
+'===============================================================================
+' Function:  FindDialog
+'    Find the dialog Object
+'
+' Description:
+'   Finds the dialog Object and returns it  
+' 
+' Parameters:
+'   String - DialogIdStr : Pass idStr of the Dialog you want to check
+' 
+' Returns: 
+'   Object - Dialog object
+' 
+'===============================================================================
+Function FindDialog(DialogIdStr)
+  
+  On Error Resume Next
+  Log.AppendFolder("Finds the Dialog Object")
+    Indicator.PushText("Finds the Dialog Object")
+    
+    Call Aliases.browser.WaitPage("http*", 120000)
+    set objPage = Aliases.browser.page
+     
+    
+   'Logic to wait for the page objects to load 
+    If aqObject.IsSupported(objPage , "contentDocument") = False Then 
+      Log.Message("Delay for content document to load")
+      AQUtils.Delay 5000
+    End If 
+    
+    If aqObject.IsSupported(objPage.contentDocument, "body") = False Then 
+      Log.Message("Delay for body to load")
+      AQUtils.Delay 5000
+    End If 
+    
+    If aqObject.IsSupported(objPage.contentDocument.body, "children") = False Then 
+      Log.Message("Delay for children to load")
+      AQUtils.Delay 5000
+    End If 
+    
+    set objPage = Aliases.browser.page
+
+    set objDialog = HTML.FindChildMethods.FromParent_Proximity1(objPage, "idStr", DialogIdStr, 2)
+    
+    If objDialog.Exists Then
+      Set FindDialog = objDialog
+    Else
+      Set FindDialog = objDialog
+      Log.Warning("Dialog is not on the screen")
+    End iF 
+    
+    'Error Handling
+    If Err.Number <> 0 Then 
+      Log.Error("Error encountered: Source: " & Err.Source & " Description: " & Err.Description)
+      Log.Message("Error encountered: Source: " & Err.Source & " Description: " & Err.Description)
+      Err.Clear
+    End if 
+   
+     
+    Indicator.PopText
+  Log.PopLogFolder
+
+End Function
+
+'===============================================================================
 ' Sub: SLDRowsChecking
 '   Checks all the rows in the list of layout.
 '
@@ -35,126 +153,6 @@ Sub SLDRowsChecking(objDialog)
 End sub
 
 '===============================================================================
-' Sub: SLDContinueChecking
-'   Checks if the correct target after the submmit.
-'
-' Description: 
-'   Checks if the correct target after the submmit.
-'   
-' Parameters:
-'   String -  strIdDialog : Dialog id
-'   String -  strMenuItem : Name of the menu
-'   Integer    -  CheckingType : Type of the checking
-'              -  1 : Check only first item in the list
-'              -  2 : Check first item in the each of list category
-'              -  3 : Check each of items
-'   
-'===============================================================================
-Sub SLDContinueChecking(strIdDialog, strMenuItem, CheckingType)
-
-  On Error Resume Next 
-    Log.AppendFolder("Checks if the correct target after the submmit.")
-      Indicator.PushText("Checks if the correct target after the submmit.")
-
-
-      Set objDialog = FindDialog(strIdDialog)
-      Set TableList = HTML.FindChildMethods.FromParent_Proximity1(objDialog, "idStr", "qadLDLayoutList", 2)
-      Set TableContainer = TableList.parentElement
-
-      Dim i, TableValues, CellNumber
-      CellNumber = 1
-
-      TableValues = SLDParseTable(TableList)
-
-      Select Case CheckingType
-      ' check one item
-        Case 1
-          Set btnName = HTML.ButtonQAD.FindButton_Proximity3(objDialog, "qadLDSubmitBtn")
-          Call HTML.ButtonQAD.ClickBtn(btnName)
-
-          Set page = Sys.Browser("*").Page("*")
-          If CheckSelectedLayout(UrlDecode(page.URL), TableValues(i)(1,0)) Then
-            Log.Event("Target is CORRECT")
-          Else 
-            Log.Warning("Target is NOT CORRECT")
-          End if
-        ' Check first item in the each of list category
-        Case 2
-          For i = 0 To UBound(TableValues)
-            Log.AppendFolder("check one item in each category "&i)
-              Set TableRow = TableList.Cell(CellNumber, 0)
-              Call CommonFunction.ScrollDown(TableContainer, TableRow)
-              TableRow.Click
-              Set btnName = HTML.ButtonQAD.FindButton_Proximity3(objDialog, "qadLDSubmitBtn")
-              Call HTML.ButtonQAD.ClickBtn(btnName)
-              AqUtils.Delay 100
-              If NOT objDialog.Exists Then 
-                Log.Checkpoint("Select Layout Dialog is CLOSED")
-              Else 
-                Log.Warning("Select Layout Dialog is NOT CLOSED")
-              End If
-              Set page = Sys.Browser("*").Page("*")
-              If CheckSelectedLayout(UrlDecode(page.URL), TableValues(i)(1,0)) Then
-                Log.Event("Target is CORRECT")
-              Else 
-                Log.Warning("Target is NOT CORRECT")
-              End if
-              If UBound(TableValues) <> i Then
-                AqUtils.Delay 250
-                Call NavToSLDialogFromEditor()
-                Set objDialog = FindDialog(strIdDialog)
-                CellNumber = CellNumber + UBound(TableValues(i)) + 1
-              End if
-            Log.PopLogFolder
-          Next
-        ' Check each of items
-        Case 3
-          For i = 0 To UBound(TableValues)
-            For j = 1 To UBound(TableValues(i))
-              Log.AppendFolder("check one item in each category "&i&" item "&j)
-
-                Set TableRow = TableList.Cell(CellNumber, 0)
-                Call CommonFunction.ScrollDown(TableContainer, TableRow)
-                TableRow.Click
-                If NOT objDialog.Exists Then 
-                  Log.Message("objDialog is NOT Exists")
-                End if
-                Set btnName = HTML.ButtonQAD.FindButton_Proximity3(objDialog, "qadLDSubmitBtn")
-                Call HTML.ButtonQAD.ClickBtn(btnName)
-                
-                AqUtils.Delay 100
-                
-                If NOT objDialog.Exists Then 
-                  Log.Checkpoint("Select Layout Dialog is CLOSED")
-                Else 
-                  Log.Warning("Select Layout Dialog is NOT CLOSED")
-                End If
-                
-                Set page = Sys.Browser("*").Page("*")
-                If CheckSelectedLayout(UrlDecode(page.URL), TableValues(i)(j,0)) Then
-                  Log.Event("Target is CORRECT")
-                Else 
-                  Log.Warning("Target is NOT CORRECT")
-                End if
-                
-                CellNumber = CellNumber + 1
-                Call NavToSLDialogFromEditor()
-                Set objDialog = FindDialog(strIdDialog)
-              Log.PopLogFolder
-            Next
-
-            CellNumber = CellNumber + 1
-          Next
-
-        Case Else
-          Log.Error = "Wrong CheckingType!"
-      End Select
-
-      Indicator.PopText
-    Log.PopLogFolder
-End sub
-
-'===============================================================================
 ' Sub: ActiveColumnChecking
 '   Checking the absence of values and duplication "Yes".
 ' 
@@ -172,7 +170,7 @@ Sub ActiveColumnChecking(arrTBody)
   checkEr = false
   tempActive = "No"
 
-  For i = 1 to UBound(arrTBody, 1) - 1
+  For i = 1 to UBound(arrTBody, 1)
     ' Check for the absence of value.
     If arrTBody(i, 2) <> "" Then
       ' Check for duplicate "Yes".
@@ -193,6 +191,7 @@ Sub ActiveColumnChecking(arrTBody)
   ' Check for at least one Yes-active in "System".
   If (arrTBody(0, 0) = "System") and (tempActive = "No") Then
     checkEr = true
+    Log.Warning("All System layouts are inactive.")
   End if
 
   If checkEr = true Then
@@ -257,188 +256,143 @@ Function SLDParseTableBody(objTableBody)
 
 End function
 
-'===============================================================================
-' Function:  GetSLRowNumber
-'
-' Description:  
-'   
-' Parameters:
-'   Object - objTable : 
-'   String - strLayoutName : 
-' 
-' Returns: 
-'   Integer - Row Number
-' 
-'===============================================================================
 
-Function GetSLRowNumber(objTable, strLayoutName)
 
-  Log.AppendFolder("Get select layout dialog row number")
-    For i = 0 To objTable.RowCount - 1 
-      If LCase(Trim(objTable.Cell(i, 0).innerText)) = LCase(strLayoutName) Then
-        GetSLRowNumber = i
-        Log.Message( "GetSLRowNumber - " & i )
-        Exit For
-      Else
-        If i = objTable.RowCount Then
-          GetSLRowObj = false
-        End if
-      End if
-    Next
-  Log.PopLogFolder
 
-End Function
 
-'===============================================================================
-' Function:  FindDialog
-'    Find the dialog Object 
-'
-' Description:  
-'   Finds the dialog Object and returns it  
-' 
-' Parameters:
-'   String - DialogIdStr : Pass idStr of the Dialog you want to check
-' 
-' Returns: 
-'   Object - Dialog object     
-' 
-'===============================================================================
-Function FindDialog(DialogIdStr)
+
+
+
+' '===============================================================================
+' ' Sub: MARowsChecking
+' '   Checks all the rows in the list of layout.
+' '
+' ' Description:
+' '   Checks all the rows in the list of layout.
+' '
+' ' Parameters:
+' '   Object -  objDialog : Dialog object
+' ' 
+' '===============================================================================
+' Sub MARowsChecking(objDialog)
   
-  On Error Resume Next
-  Log.AppendFolder("Finds the Dialog Object")
-    Indicator.PushText("Finds the Dialog Object")
+'   On Error Resume Next 
+'     Log.AppendFolder("Checking all the rows in the list of layout.")
+'       Indicator.PushText("Checking all the rows in the list of layout.")
     
-    Call Aliases.browser.WaitPage("http*", 120000)
-    set objPage = Aliases.browser.page
-    
-    Log.Enabled = False 
-    
-   'Logic to wait for the page objects to load 
-    If aqObject.IsSupported(objPage , "contentDocument") = False Then 
-      Log.Message("Delay for content document to load")
-      AQUtils.Delay 5000
-    End If 
-    
-    If aqObject.IsSupported(objPage.contentDocument, "body") = False Then 
-      Log.Message("Delay for body to load")
-      AQUtils.Delay 5000
-    End If 
-    
-    If aqObject.IsSupported(objPage.contentDocument.body, "children") = False Then 
-      Log.Message("Delay for children to load")
-      AQUtils.Delay 5000
-    End If 
-    
-    set objPage = Aliases.browser.page
+'       Set TableList = HTML.FindChildMethods.FromParent_Proximity1(objDialog, "idStr", "qadLDLayoutList", 2)
 
-    set objDialog = HTML.FindChildMethods.FromParent_Proximity1(objPage, "idStr", DialogIdStr, 2)
-    
-    Log.Enabled = True
-    If Not objDialog.Exists Then
-      Log.Message("Dialog is not on the screen, cannot perform click Cancel on it")
-      Set FindDialog = objDialog
-      Indicator.PopText
-      Log.PopLogFolder
-      Exit Function
-    
-    End iF 
-    Log.Enabled = False
-    Set FindDialog = objDialog
-    
-    'Error Handling
-    If Err.Number <> 0 Then 
-      Log.Error("Error encountered: Source: " & Err.Source & " Description: " & Err.Description)
-      Log.Message("Error encountered: Source: " & Err.Source & " Description: " & Err.Description)
-      Err.Clear
-    End if 
-   
-    Log.Enabled = True
-     
-    Indicator.PopText
-  Log.PopLogFolder
+'       Dim i, arrTableValues
 
-End Function
+'       arrTableValues = MAParseTable(TableList)
 
-'===============================================================================
-' Function: CheckSelectedLayout
-'   Checking whether we are on the layout editor.
-'
-' Description:  
-'   Checking whether we are on the layout editor.
-'
-' Parameters:
-'   String - url : URL
-'   String - strLayoutName : Correct Layout Name
-' 
-' Returns: 
-'   Boolean - True  : if selected layout name is correct, 
-'             Flase : if selected layout name isn't correct
-' 
-'===============================================================================
-Function CheckSelectedLayout(url, strLayoutName)
+'       Log.AppendFolder("Validation the active column of each item")
+'         For i = 0 To UBound(arrTableValues)
+'           ActiveColumnChecking(arrTableValues(i))
+'         Next
+'       Log.PopLogFolder
+
+'       Indicator.PopText
+'     Log.PopLogFolder
+      
+' End sub
+
+' '===============================================================================
+' ' Sub: ActiveColumnChecking
+' '   Checking the absence of values and duplication "Yes".
+' ' 
+' ' Description:
+' '   Checking the absence of values and duplication "Yes".
+' ' 
+' ' Parameters:
+' '   Array - arrTBody : array of the rows in TBODY.
+' '
+' '===============================================================================
+' Sub ActiveColumnChecking(arrTBody)
+
+'   Dim i, tempActive
   
-  Dim LayoutName, ParPos
-  ParPos = CheckOnEditor(url)
+'   bolCheckEr = false
+'   bolTempActive = false
 
-  If CheckOnEditor(url) <> 0 Then
-    LayoutName = Right(url, Len(url) - ParPos + 1)
-    If strLayoutName = Replace(LayoutName, "layoutName=", "") Then
-      CheckSelectedLayout = True
-    Else
-      CheckSelectedLayout = False
-    End if
-  Else
-    Log.Message("Checking whether we are on the layout editor.")
-  End if
-
-End Function
-
-'===============================================================================
-' Function: CheckOnEditor
-'  Checking whether we are on the layout editor.
-'
-' Description:  
-'  Checking whether we are on the layout editor.
-'
-' Parameters:
-'   String - URL : which you want to check.
-' 
-' Returns: 
-'   Integer - 0 : If we are on a different page 
-'         other number : if we are on a layout editor page, 
-' 
-'===============================================================================
-Function CheckOnEditor(url)
-  Dim ParPos
-
-  ParPos = InStrRev(url, "layoutName")
-
-  CheckOnEditor = ParPos
-
-End Function
-
-'===============================================================================
-' Sub: NavToSLDialogFromEditor
-'  Opens the "Select design layout" dialog.
-'
-' Description:  
-'  Opens the "Select design layout" dialog.
-'
-' Parameters:
-'   String - strMenuItem : Menu item name
-'   Object - objDialog : Dialog Object
-' 
-'===============================================================================
-Sub NavToSLDialogFromEditor()
+'   For i = 1 to UBound(arrTBody, 1) - 1
+'     If TypeName(arrTBody(i, 0)) = "Boolean" Then
+'       ' Check for duplicate active layout.
+'       If arrTBody(i, 0) = true Then
+'         if bolTempActive = true Then
+'           bolCheckEr = true
+'           Exit For
+'         Else
+'           bolTempActive = true
+'         End if
+'       End If
+'     Else
+'       bolCheckEr = true
+'       Exit For
+'     End If
+'   Next
   
-  Log.AppendFolder("NavToSLDialogFromEditor")
-      Set page = Sys.Browser("*").Page("*")
-      Set qMainContainer = HTML.FindChildMethods.FromParent_Proximity1(page, "idStr", "qMainContainer", 2)
-      Set QADViewContainer = HTML.FindChildMethods.FromParent_Proximity1(qMainContainer, "idStr", "QADViewContainer", 2)
-      Set KToolBar_DesignToolbar = HTML.FindChildMethods.FromParent_Proximity1(QADViewContainer, "idStr", "KToolBar_DesignToolbar", 2)
-      Set qSelectLayoutToolbarButton = HTML.FindChildMethods.FromParent_Proximity1(KToolBar_DesignToolbar, "idStr", "qSelectLayoutToolbarButton", 2)
-      qSelectLayoutToolbarButton.Click
-  Log.PopLogFolder
+'   ' Check for at least one Yes-active in "System".
+'   If (arrTBody(0, 0) = "System") and (bolTempActive = true) Then
+'     bolCheckEr = true
+'   End if
 
-End sub
+'   If bolCheckEr = true Then
+'     Log.Warning(arrTBody(0, 0) & " is FAIL")
+'   Else
+'     Log.Checkpoint(arrTBody(0, 0) & " is DONE")
+'   End If
+
+' End Sub
+
+' '===============================================================================
+' ' Function: MAParseTable
+' '   Parse TABLE
+' ' 
+' ' Parameters:
+' '   Object - objTable : TABLE object
+' ' 
+' ' Returns: 
+' '   Array(Array(n,2), Array(n,2)... ) - array of arrays TBODY.
+' '===============================================================================
+' Function MAParseTable(objTable)
+
+'   ReDim arrTableValues(objTable.tBodies.length - 1)
+'   ' Parses the TBODY elements
+'   For i = 0 To objTable.tBodies.length - 1
+'     strCatName = objTable.tBodies.item(i).rows.item(0).cells.item(0).innerText
+'     Log.Message(strCatName)
+'     arrTableValues(i) = MAParseTableBody(objTable.tBodies.item(i))
+'   Next
+
+'   MAParseTable = arrTableValues
+  
+' End Function
+
+' '===============================================================================
+' ' Function: MAParseTableBody
+' '   Parse TBODY
+' ' 
+' ' Parameters:
+' '   Object - objTableBody : TBODY object
+' ' 
+' ' Returns: 
+' '   Array(n,2) - array of all the rows in TBODY object.
+' '===============================================================================
+' Function MAParseTableBody(objTableBody)
+  
+'   ReDim TBodyValues(objTableBody.rows.length - 1, 2)
+  
+'   ' Goes through rows
+'   For i = 1 To objTableBody.rows.length - 1
+'     ' Obtains a row
+'     Set objRow = objTableBody.rows.item(i)
+    
+'     TBodyValues(i, 0) = objRow.cells.item(0).firstElementChild.checked
+'     TBodyValues(i, 1) = Trim(objRow.cells.item(1).innerText)
+'     TBodyValues(i, 2) = Trim(objRow.cells.item(2).innerText)
+'   Next
+
+'   MAParseTableBody = TBodyValues
+
+' End function
